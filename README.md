@@ -1,4 +1,4 @@
-# 🔥 GPT-Forge: Building a Transformer from Scratch in PyTorch
+# 🔥 **GPT-Forge: From-Scratch Transformer for Text Generation**
 
 ![Python](https://img.shields.io/badge/Python-3.9%2B-blue.svg)
 ![PyTorch](https://img.shields.io/badge/PyTorch-2.2%2B-%23EE4C2C.svg)
