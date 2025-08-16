@@ -10,54 +10,66 @@ The primary goal of this project was to build a deep, hands-on understanding of 
 
 ---
 
+## Table of Contents
+- [Key Features](#-key-features)
+- [Results and Performance](#results-and-performance)
+- [Setup and Usage](#-setup-and-usage)
+- [Project Structure](#project-structure)
+- [Core Concepts Implemented](#core-concepts-implemented)
+- [Future Improvements](#future-improvements)
+
 ## ✨ Key Features
 
 * **Modular Codebase:** A well-organized and decoupled source directory (`src/`) that separates data handling, model architecture, training engine, and utilities for clarity and scalability.
 * **Custom Transformer Model:** A custom GPT model built using PyTorch's `nn.TransformerEncoderLayer`, demonstrating a deep understanding of core components.
 * **Complete ML Pipeline:** A full end-to-end pipeline covering:
-    * 🧹 **Data Preparation:** Robust text cleaning and processing.
-    * 📦 **Custom Dataloader:** Efficient batching and padding.
-    * 🚀 **Training & Evaluation Engine:** A comprehensive training loop with metrics tracking (Loss, Accuracy, Perplexity), model checkpointing, and logging.
-    * ✍️ **Text Generation:** Inference script to generate text from a given prompt using a trained model.
+    * **Data Preparation:** Robust text cleaning and processing.
+    * **Custom Dataloader:** Efficient batching and padding.
+    * **Training & Evaluation Engine:** A comprehensive training loop with metrics tracking (Loss, Accuracy, Perplexity), model checkpointing, and logging.
+    * **Text Generation:** Inference script to generate text from a given prompt using a trained model.
 * **Experiment Tracking:** Systematic tracking of two distinct experiments with different hyperparameters, with results logged and visualized.
 
 ---
 
-## 📊 Results and Performance
+## Results and Performance
 
-Two primary experiments were conducted to analyze the impact of model size and learning rate schedulers.
+Two primary experiments were conducted to analyze the impact of **model size** on performance. The key evaluation metrics are **Cross-Entropy Loss** and **Perplexity (PPL)**, where lower values indicate a better-performing model.
 
-### Experiment 1: Baseline Model with OneCycleLR
+### Experiment 1: Baseline Model
 
-* **Model:** 2 layers, 2 heads, 256 embedding dimensions.
-* **Scheduler:** `OneCycleLR` for dynamic learning rate adjustment.
+This experiment established a baseline with a smaller Transformer architecture.
+
+* **Model:** 2 layers, 4 attention heads, 256 embedding dimensions (~22M parameters).
 * **Best Validation Loss:** `4.991`
-* **Best Validation Accuracy:** `20.32%`
+* **Best Validation Perplexity:** `147.07`
 
 ![Training and Validation Metrics for Experiment 1](images/plot_exp_1.png)
 
-### Experiment 2: Larger Model with Constant LR
+### Experiment 2: Larger Model
 
-* **Model:** 4 layers, 8 heads, 512 embedding dimensions (~52M parameters).
-* **Scheduler:** Constant Learning Rate.
+This experiment scaled up the model's capacity to observe its effect on language modeling capabilities.
+
+* **Model:** 4 layers, 8 attention heads, 512 embedding dimensions (~52M parameters).
 * **Best Validation Loss:** `4.967`
-* **Best Validation Accuracy:** `20.68%`
+* **Best Validation Perplexity:** `143.55`
 
 ![Training and Validation Metrics for Experiment 2](images/plot_exp_2.png)
 
 ### Performance Comparison
 
-| Metric                  | Experiment 1 (Baseline) | Experiment 2 (Larger Model) |
-| ----------------------- | ----------------------- | --------------------------- |
-| **Embedding Size** | 256                     | 512                         |
-| **Num Layers** | 2                       | 4                           |
-| **Num Heads** | 2                       | 8                           |
-| **Total Parameters** | ~13M                    | ~52M                        |
-| **Scheduler** | OneCycleLR              | Constant LR                 |
-| **Best Validation Loss**| **4.991** | **4.967** |
-| **Best Validation Acc.**| **20.32%** | **20.68%** |
+As expected, **scaling up the model's parameters resulted in better performance**, achieving a lower validation loss and perplexity. This demonstrates the model's ability to leverage increased capacity to better understand the patterns in the training data.
 
-### ✍️ Text Generation Showcase
+| Metric                  | Experiment 1 (Baseline) | Experiment 2 (Larger Model) |
+| :---------------------- | :---------------------- | :--------------------------|
+| **Embedding Size** | 256                     | **512** |
+| **Num Layers** | 2                       | **4** |
+| **Num Heads** | 4                       | **8** |
+| **Total Parameters** | ~22M                    | **~52M** |
+| **Best Validation Loss**| 4.991                   | **4.967** |
+| **Best Validation PPL** | 147.07                  | **143.55** |
+---
+
+### Text Generation Showcase
 
 Here are some examples of text generated by the best-performing model (from Experiment 2) given a prompt.
 
@@ -93,16 +105,7 @@ It is recommended to use a virtual environment.
 python -m venv venv
 source venv/bin/activate  # On Windows, use `venv\Scripts\activate`
 pip install -r requirements.txt
-```
-*(A `requirements.txt` file should be created with the following content:)*
-```
-torch==2.2.0
-torchtext==0.17.2
-torchdata==0.7.1
-transformers==4.35.2
-matplotlib
-tqdm
-seaborn
+
 ```
 
 ### 3. Prepare the Data
@@ -171,52 +174,51 @@ print("-" * 50)
 
 ---
 
-## 🏛️ Project Structure
+## Project Structure
 
 The repository is organized to maintain a clean and scalable project structure.
 
 ```
-gpt/
-│
+/
+├── 00_model_prototyping.ipynb      # Initial notebook for development and testing
 ├── data/
-│   ├── imdb_dataset.pt         # Raw data (user must provide)
-│   └── processed_data.pkl      # Processed train/val/test splits
+│   ├── imdb_dataset.pt             # Raw data (user must provide)
+│   └── processed_data.pkl          # Processed train/val/test splits
 │
 ├── images/
-│   ├── plot_exp_1.png          # Training history plots for Experiment 1
-│   └── plot_exp_2.png          # Training history plots for Experiment 2
+│   ├── 01_baseline_training_metrics.png # Training metrics for the baseline model
+│   └── 02_scaled_training_metrics.png   # Training metrics for the scaled model
 │
 ├── notebooks/
-│   ├── initial_notebook.ipynb  # Initial exploration and prototyping
-│   ├── exp1.ipynb              # End-to-end notebook for Experiment 1
-│   └── exp2.ipynb              # End-to-end notebook for Experiment 2
+│   ├── 01_experiment_baseline_model.ipynb # Notebook for training the baseline model
+│   └── 02_experiment_scaled_model.ipynb   # Notebook for training the scaled model
 │
 ├── runs/
-│   ├── epoch_1_30/             # Logs and models for Experiment 1
+│   ├── epoch_1_30/                 # Logs & models for Experiment 1 (Baseline)
 │   │   ├── best_model.pth
 │   │   └── training.log
-│   └── epoch_1_20_v2/          # Logs and models for Experiment 2
+│   └── epoch_1_20_v2/              # Logs & models for Experiment 2 (Scaled)
 │       ├── best_model.pth
 │       └── training.log
 │
 ├── scripts/
-│   └── prepare_data.py         # Script for data cleaning and preprocessing
+│   └── prepare_data.py             # Script for data cleaning and preprocessing
 │
 ├── src/
-│   ├── config.py               # Hyperparameters and project constants
-│   ├── dataloader.py           # Data loading and collation logic
-│   ├── engine.py               # Training and evaluation loops
-│   ├── model.py                # Main CustomGPTModel class
-│   ├── modules.py              # Sub-modules (PositionalEncoding, TokenEmbedding)
-│   └── utils.py                # Helper functions (text generation, logging)
+│   ├── config.py                   # Hyperparameters and project constants
+│   ├── dataloader.py               # Data loading and collation logic
+│   ├── engine.py                   # Training and evaluation loops
+│   ├── model.py                    # Main CustomGPTModel class
+│   ├── modules.py                  # Sub-modules (PositionalEncoding, etc.)
+│   └── utils.py                    # Helper functions (text generation, logging)
 │
-├── .gitignore
-└── README.md
+├── README.md                       # You are here!
+└── requirements.txt                # Project dependencies
 ```
 
 ---
 
-## 🧠 Core Concepts Implemented
+## Core Concepts Implemented
 
 This project serves as a practical demonstration of several core concepts in Transformer models:
 
@@ -229,7 +231,7 @@ This project serves as a practical demonstration of several core concepts in Tra
 
 ---
 
-## 🚀 Future Improvements
+## Future Improvements
 
 -   **Implement Advanced Sampling:** Add sampling strategies like **Top-k**, **Top-p (Nucleus)**, and **temperature scaling** for more diverse and creative text generation.
 -   **Larger Dataset:** Train the model on a larger, more diverse corpus like OpenWebText to improve coherence and general knowledge.
@@ -237,6 +239,3 @@ This project serves as a practical demonstration of several core concepts in Tra
 -   **Architectural Enhancements:** Experiment with different activation functions (GeLU) and normalization layers (LayerNorm).
 
 ---
-
-## 📜 License
-This project is licensed under the MIT License. See the `LICENSE` file for details.
