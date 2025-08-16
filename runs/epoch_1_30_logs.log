@@ -1,0 +1,57 @@
+2025-08-15 15:52:50,612 - INFO - Starting training for 30 epochs on device: cuda
+2025-08-15 15:59:30,448 - INFO - Starting training for 30 epochs on device: cuda
+2025-08-15 16:01:19,493 - INFO - Starting training for 30 epochs on device: cuda
+2025-08-15 16:03:16,534 - INFO - Starting training for 30 epochs on device: cuda
+2025-08-15 16:04:32,531 - INFO - Starting training for 30 epochs on device: cuda
+2025-08-15 16:11:23,235 - INFO - Starting training for 30 epochs on device: cuda
+2025-08-15 16:13:12,291 - INFO - Starting training for 30 epochs on device: cuda
+2025-08-15 16:13:50,998 - INFO - | Epoch   1/ 30 | Time: 38.71s | LR: 0.000084 | Train Loss: 8.691, PPL:  5947.41, Acc:  5.70% | Val Loss: 6.826, PPL:   921.06, Acc:  5.88% |
+2025-08-15 16:13:51,394 - INFO - -> New best model saved to 'runs/epoch_1_30/best_model.pth' with validation loss: 6.826
+2025-08-15 16:14:30,789 - INFO - | Epoch   2/ 30 | Time: 38.39s | LR: 0.000228 | Train Loss: 6.274, PPL:   530.75, Acc: 11.39% | Val Loss: 5.842, PPL:   344.30, Acc: 14.06% |
+2025-08-15 16:14:31,287 - INFO - -> New best model saved to 'runs/epoch_1_30/best_model.pth' with validation loss: 5.842
+2025-08-15 16:15:11,104 - INFO - | Epoch   3/ 30 | Time: 38.50s | LR: 0.000300 | Train Loss: 5.733, PPL:   308.92, Acc: 14.84% | Val Loss: 5.536, PPL:   253.70, Acc: 16.00% |
+2025-08-15 16:15:11,615 - INFO - -> New best model saved to 'runs/epoch_1_30/best_model.pth' with validation loss: 5.536
+2025-08-15 16:15:51,448 - INFO - | Epoch   4/ 30 | Time: 38.50s | LR: 0.000299 | Train Loss: 5.488, PPL:   241.75, Acc: 16.24% | Val Loss: 5.370, PPL:   214.94, Acc: 16.95% |
+2025-08-15 16:15:51,970 - INFO - -> New best model saved to 'runs/epoch_1_30/best_model.pth' with validation loss: 5.370
+2025-08-15 16:16:31,669 - INFO - | Epoch   5/ 30 | Time: 38.35s | LR: 0.000296 | Train Loss: 5.323, PPL:   204.95, Acc: 17.19% | Val Loss: 5.276, PPL:   195.57, Acc: 17.55% |
+2025-08-15 16:16:32,210 - INFO - -> New best model saved to 'runs/epoch_1_30/best_model.pth' with validation loss: 5.276
+2025-08-15 16:17:12,097 - INFO - | Epoch   6/ 30 | Time: 38.54s | LR: 0.000291 | Train Loss: 5.207, PPL:   182.48, Acc: 17.87% | Val Loss: 5.212, PPL:   183.49, Acc: 18.13% |
+2025-08-15 16:17:12,607 - INFO - -> New best model saved to 'runs/epoch_1_30/best_model.pth' with validation loss: 5.212
+2025-08-15 16:17:52,181 - INFO - | Epoch   7/ 30 | Time: 38.29s | LR: 0.000284 | Train Loss: 5.112, PPL:   165.96, Acc: 18.42% | Val Loss: 5.151, PPL:   172.55, Acc: 18.50% |
+2025-08-15 16:17:52,684 - INFO - -> New best model saved to 'runs/epoch_1_30/best_model.pth' with validation loss: 5.151
+2025-08-15 16:18:32,259 - INFO - | Epoch   8/ 30 | Time: 38.31s | LR: 0.000275 | Train Loss: 5.038, PPL:   154.20, Acc: 18.81% | Val Loss: 5.119, PPL:   167.24, Acc: 18.82% |
+2025-08-15 16:18:32,771 - INFO - -> New best model saved to 'runs/epoch_1_30/best_model.pth' with validation loss: 5.119
+2025-08-15 16:19:12,551 - INFO - | Epoch   9/ 30 | Time: 38.41s | LR: 0.000265 | Train Loss: 4.970, PPL:   144.07, Acc: 19.22% | Val Loss: 5.079, PPL:   160.68, Acc: 19.16% |
+2025-08-15 16:19:13,076 - INFO - -> New best model saved to 'runs/epoch_1_30/best_model.pth' with validation loss: 5.079
+2025-08-15 16:19:52,753 - INFO - | Epoch  10/ 30 | Time: 38.32s | LR: 0.000253 | Train Loss: 4.909, PPL:   135.44, Acc: 19.54% | Val Loss: 5.074, PPL:   159.79, Acc: 19.12% |
+2025-08-15 16:19:53,310 - INFO - -> New best model saved to 'runs/epoch_1_30/best_model.pth' with validation loss: 5.074
+2025-08-15 16:20:32,991 - INFO - | Epoch  11/ 30 | Time: 38.30s | LR: 0.000240 | Train Loss: 4.858, PPL:   128.83, Acc: 19.82% | Val Loss: 5.059, PPL:   157.36, Acc: 19.33% |
+2025-08-15 16:20:33,520 - INFO - -> New best model saved to 'runs/epoch_1_30/best_model.pth' with validation loss: 5.059
+2025-08-15 16:21:13,292 - INFO - | Epoch  12/ 30 | Time: 38.39s | LR: 0.000225 | Train Loss: 4.806, PPL:   122.27, Acc: 20.20% | Val Loss: 5.040, PPL:   154.41, Acc: 19.51% |
+2025-08-15 16:21:13,819 - INFO - -> New best model saved to 'runs/epoch_1_30/best_model.pth' with validation loss: 5.040
+2025-08-15 16:21:53,582 - INFO - | Epoch  13/ 30 | Time: 38.35s | LR: 0.000209 | Train Loss: 4.764, PPL:   117.21, Acc: 20.42% | Val Loss: 5.029, PPL:   152.73, Acc: 19.55% |
+2025-08-15 16:21:54,083 - INFO - -> New best model saved to 'runs/epoch_1_30/best_model.pth' with validation loss: 5.029
+2025-08-15 16:22:33,710 - INFO - | Epoch  14/ 30 | Time: 38.40s | LR: 0.000193 | Train Loss: 4.729, PPL:   113.14, Acc: 20.63% | Val Loss: 5.031, PPL:   153.12, Acc: 19.72% |
+2025-08-15 16:23:13,582 - INFO - | Epoch  15/ 30 | Time: 38.39s | LR: 0.000176 | Train Loss: 4.690, PPL:   108.88, Acc: 20.89% | Val Loss: 5.022, PPL:   151.70, Acc: 19.80% |
+2025-08-15 16:23:14,126 - INFO - -> New best model saved to 'runs/epoch_1_30/best_model.pth' with validation loss: 5.022
+2025-08-15 16:23:53,824 - INFO - | Epoch  16/ 30 | Time: 38.39s | LR: 0.000159 | Train Loss: 4.661, PPL:   105.72, Acc: 21.10% | Val Loss: 5.023, PPL:   151.85, Acc: 19.75% |
+2025-08-15 16:24:33,448 - INFO - | Epoch  17/ 30 | Time: 38.32s | LR: 0.000141 | Train Loss: 4.631, PPL:   102.62, Acc: 21.30% | Val Loss: 5.015, PPL:   150.67, Acc: 19.90% |
+2025-08-15 16:24:33,979 - INFO - -> New best model saved to 'runs/epoch_1_30/best_model.pth' with validation loss: 5.015
+2025-08-15 16:25:13,490 - INFO - | Epoch  18/ 30 | Time: 38.30s | LR: 0.000124 | Train Loss: 4.603, PPL:    99.75, Acc: 21.47% | Val Loss: 5.008, PPL:   149.66, Acc: 19.91% |
+2025-08-15 16:25:14,016 - INFO - -> New best model saved to 'runs/epoch_1_30/best_model.pth' with validation loss: 5.008
+2025-08-15 16:25:53,561 - INFO - | Epoch  19/ 30 | Time: 38.16s | LR: 0.000107 | Train Loss: 4.578, PPL:    97.34, Acc: 21.64% | Val Loss: 5.006, PPL:   149.30, Acc: 20.06% |
+2025-08-15 16:25:54,122 - INFO - -> New best model saved to 'runs/epoch_1_30/best_model.pth' with validation loss: 5.006
+2025-08-15 16:26:33,762 - INFO - | Epoch  20/ 30 | Time: 38.29s | LR: 0.000091 | Train Loss: 4.555, PPL:    95.09, Acc: 21.81% | Val Loss: 5.005, PPL:   149.18, Acc: 19.97% |
+2025-08-15 16:26:34,303 - INFO - -> New best model saved to 'runs/epoch_1_30/best_model.pth' with validation loss: 5.005
+2025-08-15 16:27:13,815 - INFO - | Epoch  21/ 30 | Time: 38.28s | LR: 0.000075 | Train Loss: 4.535, PPL:    93.21, Acc: 21.97% | Val Loss: 4.994, PPL:   147.48, Acc: 20.16% |
+2025-08-15 16:27:14,337 - INFO - -> New best model saved to 'runs/epoch_1_30/best_model.pth' with validation loss: 4.994
+2025-08-15 16:27:54,082 - INFO - | Epoch  22/ 30 | Time: 38.40s | LR: 0.000060 | Train Loss: 4.518, PPL:    91.68, Acc: 22.10% | Val Loss: 5.000, PPL:   148.43, Acc: 20.07% |
+2025-08-15 16:28:33,857 - INFO - | Epoch  23/ 30 | Time: 38.48s | LR: 0.000047 | Train Loss: 4.507, PPL:    90.66, Acc: 22.22% | Val Loss: 4.994, PPL:   147.57, Acc: 20.15% |
+2025-08-15 16:29:13,689 - INFO - | Epoch  24/ 30 | Time: 38.54s | LR: 0.000035 | Train Loss: 4.493, PPL:    89.41, Acc: 22.30% | Val Loss: 5.004, PPL:   148.97, Acc: 20.16% |
+2025-08-15 16:29:53,645 - INFO - | Epoch  25/ 30 | Time: 38.60s | LR: 0.000025 | Train Loss: 4.483, PPL:    88.51, Acc: 22.38% | Val Loss: 5.002, PPL:   148.69, Acc: 20.18% |
+2025-08-15 16:30:33,954 - INFO - | Epoch  26/ 30 | Time: 38.91s | LR: 0.000016 | Train Loss: 4.475, PPL:    87.82, Acc: 22.45% | Val Loss: 5.004, PPL:   148.98, Acc: 20.15% |
+2025-08-15 16:31:13,998 - INFO - | Epoch  27/ 30 | Time: 38.65s | LR: 0.000009 | Train Loss: 4.470, PPL:    87.39, Acc: 22.49% | Val Loss: 4.991, PPL:   147.07, Acc: 20.30% |
+2025-08-15 16:31:14,569 - INFO - -> New best model saved to 'runs/epoch_1_30/best_model.pth' with validation loss: 4.991
+2025-08-15 16:31:54,353 - INFO - | Epoch  28/ 30 | Time: 38.41s | LR: 0.000004 | Train Loss: 4.463, PPL:    86.79, Acc: 22.53% | Val Loss: 5.000, PPL:   148.35, Acc: 20.17% |
+2025-08-15 16:32:33,947 - INFO - | Epoch  29/ 30 | Time: 38.39s | LR: 0.000001 | Train Loss: 4.465, PPL:    86.96, Acc: 22.55% | Val Loss: 4.996, PPL:   147.82, Acc: 20.32% |
+2025-08-15 16:33:13,585 - INFO - | Epoch  30/ 30 | Time: 38.31s | LR: 0.000000 | Train Loss: 4.464, PPL:    86.85, Acc: 22.58% | Val Loss: 4.998, PPL:   148.06, Acc: 20.14% |
