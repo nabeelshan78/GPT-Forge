@@ -33,6 +33,7 @@ The primary goal of this project was to build a deep, hands-on understanding of 
 
 ## Results and Performance
 
+*All experiments were conducted on an NVIDIA A10G GPU.*  
 Two primary experiments were conducted to analyze the impact of **model size** on performance. The key evaluation metrics are **Cross-Entropy Loss** and **Perplexity (PPL)**, where lower values indicate a better-performing model.
 
 ### Experiment 1: Baseline Model
@@ -185,6 +186,13 @@ print(f"Prompt: '{prompt}'")
 print(f"Generated Text: '{generated_text}'")
 print("-" * 50)
 ```
+
+### Hardware Requirements
+
+A CUDA-enabled GPU is **highly recommended** for training this model in a reasonable amount of time.
+
+- The training script will automatically detect and use an available NVIDIA GPU.
+- If a compatible GPU is not found, the code will fall back to using the CPU, but training will be **significantly slower**.
 
 ---
 
