@@ -1,0 +1,7 @@
+torch==2.2.0
+torchtext==0.17.2
+torchdata==0.7.1
+transformers==4.35.2
+matplotlib
+tqdm
+seaborn
