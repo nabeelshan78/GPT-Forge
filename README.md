@@ -44,7 +44,7 @@ This experiment established a baseline with a smaller Transformer architecture.
 * **Best Validation Loss:** `4.991`
 * **Best Validation Perplexity:** `147.07`
 
-![Training and Validation Metrics for Experiment 1](images/plot_exp_1.png)
+![Training and Validation Metrics for Experiment 1](images/01_baseline_training_metrics.png)
 
 ### Experiment 2: Larger Model
 
@@ -54,7 +54,7 @@ This experiment scaled up the model's capacity to observe its effect on language
 * **Best Validation Loss:** `4.967`
 * **Best Validation Perplexity:** `143.55`
 
-![Training and Validation Metrics for Experiment 2](images/plot_exp_2.png)
+![Training and Validation Metrics for Experiment 2](images/02_scaled_training_metrics.png)
 
 ### Performance Comparison
 
