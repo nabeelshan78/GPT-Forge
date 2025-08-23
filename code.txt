@@ -1,0 +1,2504 @@
+Important:  Create a compelling , well documented, well crafted, eye catching to recruiters, attractive, professional and visually appealing Readme file for this repository.
+Important Note: Make sure give all content in Github;s Readmemd format, so that i can just copy from here and paste their
+
+
+================================================================================================
+
+I have this directory structure:
+
+D:\Machine Learning Deep Learning\Github Repos\gpt>dir /s /b
+D:\Machine Learning Deep Learning\Github Repos\gpt\data
+D:\Machine Learning Deep Learning\Github Repos\gpt\images
+D:\Machine Learning Deep Learning\Github Repos\gpt\initial_notebook.ipynb
+D:\Machine Learning Deep Learning\Github Repos\gpt\notebooks
+D:\Machine Learning Deep Learning\Github Repos\gpt\runs
+D:\Machine Learning Deep Learning\Github Repos\gpt\scripts
+D:\Machine Learning Deep Learning\Github Repos\gpt\src
+D:\Machine Learning Deep Learning\Github Repos\gpt\images\plot_exp_1
+D:\Machine Learning Deep Learning\Github Repos\gpt\images\plot_exp_2
+D:\Machine Learning Deep Learning\Github Repos\gpt\notebooks\exp1.ipynb
+D:\Machine Learning Deep Learning\Github Repos\gpt\notebooks\exp2.ipynb
+D:\Machine Learning Deep Learning\Github Repos\gpt\runs\epoch_1_20_v2_logs.log
+D:\Machine Learning Deep Learning\Github Repos\gpt\runs\epoch_1_30_logs.log
+D:\Machine Learning Deep Learning\Github Repos\gpt\scripts\prepare_data.py
+D:\Machine Learning Deep Learning\Github Repos\gpt\src\config.py
+D:\Machine Learning Deep Learning\Github Repos\gpt\src\dataloader.py
+D:\Machine Learning Deep Learning\Github Repos\gpt\src\engine.py
+D:\Machine Learning Deep Learning\Github Repos\gpt\src\model.py
+D:\Machine Learning Deep Learning\Github Repos\gpt\src\modules.py
+D:\Machine Learning Deep Learning\Github Repos\gpt\src\utils.py
+
+D:\Machine Learning Deep Learning\Github Repos\gpt>
+
+
+
+
+
+Work Done in this is below:
+================================================================================================
+D:\Machine Learning Deep Learning\Github Repos\gpt\initial_notebook.ipynb
+
+# !pip install torch==2.2.0
+# !pip install torchtext==0.17.2
+# !pip install torchdata==0.7.1
+# !pip install transformers==4.35.2
+# !pip install seaborn 
+ 
+import os
+import math
+import time
+import warnings
+from typing import Any, Iterable, List, Tuple
+
+import matplotlib.pyplot as plt
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+from torch import Tensor
+from torch.nn import Transformer
+from torch.nn.utils.rnn import pad_sequence
+from torch.optim import Adam, AdamW, Optimizer
+from torch.optim.lr_scheduler import StepLR, _LRScheduler
+from torch.utils.data import DataLoader, random_split
+from tqdm import tqdm
+
+from torchtext.data.utils import get_tokenizer
+from torchtext.vocab import Vocab, build_vocab_from_iterator
+
+# Suppress warnings
+warnings.filterwarnings("ignore")
+ 
+train_data, test_data = torch.load("data/imdb_dataset.pt")
+print(f"Train size: {len(train_data)}, Test size: {len(test_data)}")
+Train size: 25000, Test size: 25000
+print(train_data[0])
+print('=' * 50)
+print(train_data[1])
+(1, 'I rented I AM CURIOUS-YELLOW from my video store because of all the controversy that surrounded it when it was first released in 1967. I also heard that at first it was seized by U.S. customs if it ever tried to enter this country, therefore being a fan of films considered "controversial" I really had to see this for myself.<br /><br />The plot is centered around a young Swedish drama student named Lena who wants to learn everything she can about life. In particular she wants to focus her attentions to making some sort of documentary on what the average Swede thought about certain political issues such as the Vietnam War and race issues in the United States. In between asking politicians and ordinary denizens of Stockholm about their opinions on politics, she has sex with her drama teacher, classmates, and married men.<br /><br />What kills me about I AM CURIOUS-YELLOW is that 40 years ago, this was considered pornographic. Really, the sex and nudity scenes are few and far between, even then it\'s not shot like some cheaply made porno. While my countrymen mind find it shocking, in reality sex and nudity are a major staple in Swedish cinema. Even Ingmar Bergman, arguably their answer to good old boy John Ford, had sex scenes in his films.<br /><br />I do commend the filmmakers for the fact that any sex shown in the film is shown for artistic purposes rather than just to shock people and make money to be shown in pornographic theaters in America. I AM CURIOUS-YELLOW is a good film for anyone wanting to study the meat and potatoes (no pun intended) of Swedish cinema. But really, this film doesn\'t have much of a plot.')
+==================================================
+(1, '"I Am Curious: Yellow" is a risible and pretentious steaming pile. It doesn\'t matter what one\'s political views are because this film can hardly be taken seriously on any level. As for the claim that frontal male nudity is an automatic NC-17, that isn\'t true. I\'ve seen R-rated films with male nudity. Granted, they only offer some fleeting views, but where are the R-rated films with gaping vulvas and flapping labia? Nowhere, because they don\'t exist. The same goes for those crappy cable shows: schlongs swinging in the breeze but not a clitoris in sight. And those pretentious indie movies like The Brown Bunny, in which we\'re treated to the site of Vincent Gallo\'s throbbing johnson, but not a trace of pink visible on Chloe Sevigny. Before crying (or implying) "double-standard" in matters of nudity, the mentally obtuse should take into account one unavoidably obvious anatomical difference between men and women: there are no genitals on display when actresses appears nude, and the same cannot be said for a man. In fact, you generally won\'t see female genitals in an American film in anything short of porn or explicit erotica. This alleged double-standard is less a double standard than an admittedly depressing ability to come to terms culturally with the insides of women\'s bodies.')
+DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+DEVICE
+device(type='cuda')
+UNK_IDX, PAD_IDX, EOS_IDX = 0, 1, 2
+special_symbols = ['<unk>', '<pad>', '<|endoftext|>']
+
+tokenizer = get_tokenizer("basic_english")
+def yield_tokens(data_iter):
+    for _, data_sample in data_iter:
+        yield tokenizer(data_sample)
+        
+vocab = build_vocab_from_iterator(yield_tokens(train_data), specials=special_symbols)
+vocab.set_default_index(UNK_IDX)
+
+artifacts_dir = "artifacts"
+os.makedirs(artifacts_dir, exist_ok=True)
+
+vocab_path = os.path.join(artifacts_dir, "vocab.pth")
+torch.save(vocab, vocab_path)
+
+print(f"Vocabulary Length: {len(vocab)}")
+print(f"Vocabulary saved to: {vocab_path}")
+Vocabulary Length: 100685
+Vocabulary saved to: artifacts/vocab.pth
+torch.manual_seed(42)
+
+train_size = int(0.8 * len(train_data))  # 20,000
+val_size = len(train_data) - train_size  # 5,000
+train_data, val_data = random_split(train_data, [train_size, val_size])
+
+print(f"Train: {len(train_data)}, Val: {len(val_data)}, Test: {len(test_data)}")
+Train: 20000, Val: 5000, Test: 25000
+ 
+text_to_index = lambda text: [vocab(token) for token in tokenizer(text)]
+index_to_text = lambda seq_en: " ".join([vocab.get_itos()[index] for index in seq_en])
+index_to_text(torch.tensor([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]))
+"<unk> <pad> <|endoftext|> the . , and a of to '"
+ 
+Text Processing
+END_OF_TEXT_TOKEN = '<|endoftext|>'
+
+def get_training_sample(
+    text: List[Any], 
+    block_size: int
+) -> Tuple[List[Any], List[Any]]:
+    """
+    Creates a single (input, target) training sample for a language model.
+
+    From a given text, this function extracts a random contiguous block of
+    `block_size` tokens for the source (X) and the subsequent, shifted
+    block of tokens for the target (Y).
+
+    Args:
+        text (List[Any]): The input text, represented as a list of tokens.
+        block_size (int): The desired length of the input/target sequences.
+
+    Returns:
+        A tuple containing the source sequence and the target sequence.
+    """
+    text_len = len(text)
+
+    # Case 1: The text is long enough to extract a full random block.
+    # We need at least `block_size + 1` tokens to create a source and a target.
+    if text_len > block_size:
+        max_start_idx = text_len - block_size - 1
+        start_idx = torch.randint(low=0, high=max_start_idx + 1, size=(1,)).item()
+        end_idx = start_idx + block_size
+        
+        src_sequence = text[start_idx : end_idx]
+        tgt_sequence = text[start_idx + 1 : end_idx + 1]
+
+    # Case 2: The text is too short. Use the entire available text.
+    else:
+        # The source is the whole text.
+        src_sequence = text
+        # The target is the source shifted by one, with an end-of-text token 
+        # appended to create a valid target for the last source token.
+        tgt_sequence = text[1:] + [END_OF_TEXT_TOKEN]
+        
+    return src_sequence, tgt_sequence
+batch_of_tokens=[]
+
+for i in range(2):
+    _ , text = train_data[i]
+    batch_of_tokens.append(tokenizer(text))
+for i in range(2):
+    text = batch_of_tokens[i][0:50]
+    src_sequences, tgt_sequence = get_training_sample(text, 10)
+    print("src: ", src_sequences)
+    print("tgt: ", tgt_sequence)
+    print('=' * 100)
+src:  ['this', 'film', 'while', 'at', 'birmingham', 'southern', 'college', 'in', '1975', ',']
+tgt:  ['film', 'while', 'at', 'birmingham', 'southern', 'college', 'in', '1975', ',', 'when']
+====================================================================================================
+src:  ['as', 'much', 'as', 'the', 'central', 'character', 'in', 'this', 'film', '.']
+tgt:  ['much', 'as', 'the', 'central', 'character', 'in', 'this', 'film', '.', 'in']
+====================================================================================================
+for i in range(2):
+    text = batch_of_tokens[i][0:50]
+    src_sequences, tgt_sequence = get_training_sample(text, 50)
+    print("src: ", src_sequences)
+    print("tgt: ", tgt_sequence)
+    print('=' * 100)
+src:  ['i', 'saw', 'this', 'film', 'while', 'at', 'birmingham', 'southern', 'college', 'in', '1975', ',', 'when', 'it', 'was', 'shown', 'in', 'combination', 'with', 'the', 'red', 'balloon', '.', 'both', 'films', 'are', 'similar', 'in', 'their', 'dream-like', 'quality', '.', 'the', 'bulk', 'of', 'the', 'film', 'entails', 'a', 'fish', 'swimming', 'happily', 'in', 'his', 'bowl', 'while', 'his', 'new', 'owner', ',']
+tgt:  ['saw', 'this', 'film', 'while', 'at', 'birmingham', 'southern', 'college', 'in', '1975', ',', 'when', 'it', 'was', 'shown', 'in', 'combination', 'with', 'the', 'red', 'balloon', '.', 'both', 'films', 'are', 'similar', 'in', 'their', 'dream-like', 'quality', '.', 'the', 'bulk', 'of', 'the', 'film', 'entails', 'a', 'fish', 'swimming', 'happily', 'in', 'his', 'bowl', 'while', 'his', 'new', 'owner', ',', '<|endoftext|>']
+====================================================================================================
+src:  ['hi', 'all', 'i', 'am', 'a', 'chess', 'enthusiast', 'since', 'the', 'age', 'of', 'about', '6', '.', 'i', 'supposed', 'i', 'am', 'quite', 'obsessed', 'by', 'chess', ',', 'but', 'hopefully', 'not', 'as', 'much', 'as', 'the', 'central', 'character', 'in', 'this', 'film', '.', 'in', 'this', 'film', ',', 'the', 'central', 'character', 'reflects', 'a', 'real', 'chess', 'player', 'called', 'curt']
+tgt:  ['all', 'i', 'am', 'a', 'chess', 'enthusiast', 'since', 'the', 'age', 'of', 'about', '6', '.', 'i', 'supposed', 'i', 'am', 'quite', 'obsessed', 'by', 'chess', ',', 'but', 'hopefully', 'not', 'as', 'much', 'as', 'the', 'central', 'character', 'in', 'this', 'film', '.', 'in', 'this', 'film', ',', 'the', 'central', 'character', 'reflects', 'a', 'real', 'chess', 'player', 'called', 'curt', '<|endoftext|>']
+====================================================================================================
+# Initialize empty lists to store source and target sequences
+src_batch, tgt_batch = [], []
+BATCH_SIZE = 2
+block_size = 20
+
+for i in range(BATCH_SIZE):
+    # Retrieve the next data point from the training iterator
+    _, text = train_data[i]
+
+    # Generate source and target sequences using the get_sample function
+    src_sequence_text, tgt_sequence_text = get_training_sample(tokenizer(text), block_size)
+
+    # Convert source and target sequences to tokenized vocabulary indices
+    src_sequence_indices = vocab(src_sequence_text)
+    tgt_sequence_indices = vocab(tgt_sequence_text)
+
+    # Convert the sequences to PyTorch tensors with dtype int64
+    src_sequence = torch.tensor(src_sequence_indices, dtype=torch.int64)
+    tgt_sequence = torch.tensor(tgt_sequence_indices, dtype=torch.int64)
+
+    # Append the source and target sequences to their respective batches
+    src_batch.append(src_sequence)
+    tgt_batch.append(tgt_sequence)
+
+    print(f"Sample {i}:")
+    print("Source Sequence (Text):", src_sequence_text)
+    print("Source Sequence (Indices):", src_sequence_indices)
+    print("Source Sequence (Shape):", src_sequence.shape)
+    print("Target Sequence (Text):", tgt_sequence_text)
+    print("Target Sequence (Indices):", tgt_sequence_indices)
+    print("Target Sequence (Shape):", tgt_sequence.shape)
+    print('=' * 100)
+Sample 0:
+Source Sequence (Text): ['complexity', '.', 'it', 'is', 'hard', 'to', 'imagine', 'how', 'the', 'director', 'could', "'", 've', 'pulled', 'the', 'technical', 'feat', 'back', 'in', '1959']
+Source Sequence (Indices): [4600, 4, 12, 11, 274, 9, 823, 96, 3, 174, 105, 10, 147, 1860, 3, 1709, 5830, 154, 13, 6396]
+Source Sequence (Shape): torch.Size([20])
+Target Sequence (Text): ['.', 'it', 'is', 'hard', 'to', 'imagine', 'how', 'the', 'director', 'could', "'", 've', 'pulled', 'the', 'technical', 'feat', 'back', 'in', '1959', '--']
+Target Sequence (Indices): [4, 12, 11, 274, 9, 823, 96, 3, 174, 105, 10, 147, 1860, 3, 1709, 5830, 154, 13, 6396, 377]
+Target Sequence (Shape): torch.Size([20])
+====================================================================================================
+Sample 1:
+Source Sequence (Text): ['suicide', 'in', '1924', '.', 'he', 'is', 'famous', 'for', 'a', 'game', 'he', 'played', 'against', 'steinitz', ',', 'where', 'a', 'beautiful', 'combination', 'was']
+Source Sequence (Indices): [1746, 13, 16738, 4, 31, 11, 789, 20, 7, 502, 31, 260, 434, 49864, 5, 124, 7, 314, 2159, 18]
+Source Sequence (Shape): torch.Size([20])
+Target Sequence (Text): ['in', '1924', '.', 'he', 'is', 'famous', 'for', 'a', 'game', 'he', 'played', 'against', 'steinitz', ',', 'where', 'a', 'beautiful', 'combination', 'was', 'played']
+Target Sequence (Indices): [13, 16738, 4, 31, 11, 789, 20, 7, 502, 31, 260, 434, 49864, 5, 124, 7, 314, 2159, 18, 260]
+Target Sequence (Shape): torch.Size([20])
+====================================================================================================
+ 
+Collate Function
+BLOCK_SIZE = 30
+
+def collate_batch(batch):
+    src_batch, tgt_batch = [], []
+    for _, text in batch:
+        src_sequence, tgt_sequence = get_training_sample(tokenizer(text), BLOCK_SIZE)
+        src_sequence, tgt_sequence = vocab(src_sequence), vocab(tgt_sequence)
+      
+        src_sequence= torch.tensor(src_sequence, dtype=torch.int64)
+        tgt_sequence = torch.tensor(tgt_sequence, dtype=torch.int64)
+        
+        src_batch.append(src_sequence)
+        tgt_batch.append(tgt_sequence)
+
+
+    src_batch = pad_sequence(src_batch, padding_value=PAD_IDX, batch_first=False)
+    tgt_batch = pad_sequence(tgt_batch, padding_value=PAD_IDX, batch_first=False)
+
+    return src_batch.to(DEVICE), tgt_batch.to(DEVICE)
+dataloader = DataLoader(train_data, batch_size=2, shuffle=True, collate_fn=collate_batch)
+for idx, batch in enumerate(dataloader):
+    print(f"\nBatch {idx}")
+    src, tgt = batch  # unpack the tuple
+
+    print("Source (src) shape:", src.shape)
+    print("Target (tgt) shape:", tgt.shape)
+    print('=' * 100)
+    
+    print("\nSamples:")
+    for i in range(min(2, src.shape[1])):  # only show up to 2 samples
+        print(f"Sample {i+1}:")
+        print("  source:", index_to_text(src[:, i]))  
+        print("  target:", index_to_text(tgt[:, i])) 
+        print('=' * 100)
+    break  # only inspect first batch
+Batch 0
+Source (src) shape: torch.Size([30, 2])
+Target (tgt) shape: torch.Size([30, 2])
+====================================================================================================
+
+Samples:
+Sample 1:
+  source: photographed with that wonderful opening of guinness and his son driving down the champs elysee with the arc de triomphe in the background . unfortunately it goes downhill from there
+  target: with that wonderful opening of guinness and his son driving down the champs elysee with the arc de triomphe in the background . unfortunately it goes downhill from there .
+====================================================================================================
+Sample 2:
+  source: . and i don ' t believe there are many cynics who would say that people aren ' t capable of change and redemption . this film version portrays all
+  target: and i don ' t believe there are many cynics who would say that people aren ' t capable of change and redemption . this film version portrays all of
+====================================================================================================
+ 
+ 
+Masking
+In transformers, masking is crucial for ensuring certain positions are not attended to. The function generate_square_subsequent_mask produces an upper triangular matrix, which ensures that during decoding, a token can't attend to future tokens of target.
+
+# 1. the raw attention scores (from Q @ K.T)  # [4, 4]
+raw_scores = torch.tensor([
+    [0.8, 0.2, 0.9, 1.4],
+    [0.5, 0.7, 1.1, 0.1],
+    [1.2, 0.3, 0.6, 0.4],
+    [0.9, 1.5, 0.8, 0.2]
+])
+
+# the causal mask
+# This mask prevents positions from attending to subsequent positions.
+# 0.0 means "allowed", -inf means "prevented".
+mask = torch.tensor([
+    [0.0, float('-inf'), float('-inf'), float('-inf')],
+    [0.0, 0.0,        float('-inf'), float('-inf')],
+    [0.0, 0.0,        0.0,        float('-inf')],
+    [0.0, 0.0,        0.0,        0.0]
+])
+
+print("Step 1: Raw Attention Scores")
+print(raw_scores)
+print("-" * 30)
+
+print("Step 2: Causal Mask")
+print(mask)
+print("-" * 30)
+
+
+# Add the mask to the raw scores
+masked_scores = raw_scores + mask
+
+print("Step 3: Masked Scores (Scores + Mask)")
+print(masked_scores)
+print("-" * 30)
+
+# Apply the softmax function to get the final attention weights
+# dim=1 ensures softmax is applied row-wise.
+attention_weights = F.softmax(masked_scores, dim=1)
+
+print("Step 4: Final Attention Weights after Softmax")
+print(attention_weights)
+print("-" * 30)
+
+print("Sum of each row in the final weights:")
+print(attention_weights.sum(dim=1))
+Step 1: Raw Attention Scores
+tensor([[0.8000, 0.2000, 0.9000, 1.4000],
+        [0.5000, 0.7000, 1.1000, 0.1000],
+        [1.2000, 0.3000, 0.6000, 0.4000],
+        [0.9000, 1.5000, 0.8000, 0.2000]])
+------------------------------
+Step 2: Causal Mask
+tensor([[0., -inf, -inf, -inf],
+        [0., 0., -inf, -inf],
+        [0., 0., 0., -inf],
+        [0., 0., 0., 0.]])
+------------------------------
+Step 3: Masked Scores (Scores + Mask)
+tensor([[0.8000,   -inf,   -inf,   -inf],
+        [0.5000, 0.7000,   -inf,   -inf],
+        [1.2000, 0.3000, 0.6000,   -inf],
+        [0.9000, 1.5000, 0.8000, 0.2000]])
+------------------------------
+Step 4: Final Attention Weights after Softmax
+tensor([[1.0000, 0.0000, 0.0000, 0.0000],
+        [0.4502, 0.5498, 0.0000, 0.0000],
+        [0.5114, 0.2079, 0.2807, 0.0000],
+        [0.2368, 0.4314, 0.2142, 0.1176]])
+------------------------------
+Sum of each row in the final weights:
+tensor([1.0000, 1.0000, 1.0000, 1.0000])
+def generate_square_subsequent_mask(sz, device=DEVICE):
+    mask = (torch.triu(torch.ones((sz, sz), device=device)) == 1).transpose(0, 1)
+    mask = mask.float().masked_fill(mask == 0, float('-inf')).masked_fill(mask == 1, float(0.0))
+    return mask
+src_mask (Causal Mask): This is the "No Cheating" rule.
+src_padding_mask: This is the "Ignore Blank Pages" rule. ignore padding tokens
+def create_mask(src, device=DEVICE):
+    src_seq_len = src.shape[0]       # (sequence_length, batch_size)
+    # This is our "No Cheating" mask, filled with 0.0s and -inf to prevent the model from seeing future tokens during self-attention.
+    src_mask = generate_square_subsequent_mask(src_seq_len)  # (src_seq_len, src_seq_len)
+    src_padding_mask = (src == PAD_IDX).transpose(0, 1)
+    return src_mask, src_padding_mask
+src[0:3, :] = PAD_IDX
+src_mask, src_padding_mask = create_mask(src)
+src_mask.shape, src_padding_mask.shape
+(torch.Size([30, 30]), torch.Size([2, 30]))
+src_mask
+tensor([[0., -inf, -inf, -inf, -inf, -inf, -inf, -inf, -inf, -inf, -inf, -inf, -inf, -inf, -inf, -inf, -inf, -inf, -inf, -inf, -inf, -inf, -inf, -inf,
+         -inf, -inf, -inf, -inf, -inf, -inf],
+        [0., 0., -inf, -inf, -inf, -inf, -inf, -inf, -inf, -inf, -inf, -inf, -inf, -inf, -inf, -inf, -inf, -inf, -inf, -inf, -inf, -inf, -inf, -inf,
+         -inf, -inf, -inf, -inf, -inf, -inf],
+        [0., 0., 0., -inf, -inf, -inf, -inf, -inf, -inf, -inf, -inf, -inf, -inf, -inf, -inf, -inf, -inf, -inf, -inf, -inf, -inf, -inf, -inf, -inf,
+         -inf, -inf, -inf, -inf, -inf, -inf],
+        [0., 0., 0., 0., -inf, -inf, -inf, -inf, -inf, -inf, -inf, -inf, -inf, -inf, -inf, -inf, -inf, -inf, -inf, -inf, -inf, -inf, -inf, -inf,
+         -inf, -inf, -inf, -inf, -inf, -inf],
+        [0., 0., 0., 0., 0., -inf, -inf, -inf, -inf, -inf, -inf, -inf, -inf, -inf, -inf, -inf, -inf, -inf, -inf, -inf, -inf, -inf, -inf, -inf,
+         -inf, -inf, -inf, -inf, -inf, -inf],
+        [0., 0., 0., 0., 0., 0., -inf, -inf, -inf, -inf, -inf, -inf, -inf, -inf, -inf, -inf, -inf, -inf, -inf, -inf, -inf, -inf, -inf, -inf,
+         -inf, -inf, -inf, -inf, -inf, -inf],
+        [0., 0., 0., 0., 0., 0., 0., -inf, -inf, -inf, -inf, -inf, -inf, -inf, -inf, -inf, -inf, -inf, -inf, -inf, -inf, -inf, -inf, -inf,
+         -inf, -inf, -inf, -inf, -inf, -inf],
+        [0., 0., 0., 0., 0., 0., 0., 0., -inf, -inf, -inf, -inf, -inf, -inf, -inf, -inf, -inf, -inf, -inf, -inf, -inf, -inf, -inf, -inf,
+         -inf, -inf, -inf, -inf, -inf, -inf],
+        [0., 0., 0., 0., 0., 0., 0., 0., 0., -inf, -inf, -inf, -inf, -inf, -inf, -inf, -inf, -inf, -inf, -inf, -inf, -inf, -inf, -inf,
+         -inf, -inf, -inf, -inf, -inf, -inf],
+        [0., 0., 0., 0., 0., 0., 0., 0., 0., 0., -inf, -inf, -inf, -inf, -inf, -inf, -inf, -inf, -inf, -inf, -inf, -inf, -inf, -inf,
+         -inf, -inf, -inf, -inf, -inf, -inf],
+        [0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., -inf, -inf, -inf, -inf, -inf, -inf, -inf, -inf, -inf, -inf, -inf, -inf, -inf,
+         -inf, -inf, -inf, -inf, -inf, -inf],
+        [0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., -inf, -inf, -inf, -inf, -inf, -inf, -inf, -inf, -inf, -inf, -inf, -inf,
+         -inf, -inf, -inf, -inf, -inf, -inf],
+        [0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., -inf, -inf, -inf, -inf, -inf, -inf, -inf, -inf, -inf, -inf, -inf,
+         -inf, -inf, -inf, -inf, -inf, -inf],
+        [0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., -inf, -inf, -inf, -inf, -inf, -inf, -inf, -inf, -inf, -inf,
+         -inf, -inf, -inf, -inf, -inf, -inf],
+        [0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., -inf, -inf, -inf, -inf, -inf, -inf, -inf, -inf, -inf,
+         -inf, -inf, -inf, -inf, -inf, -inf],
+        [0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., -inf, -inf, -inf, -inf, -inf, -inf, -inf, -inf,
+         -inf, -inf, -inf, -inf, -inf, -inf],
+        [0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., -inf, -inf, -inf, -inf, -inf, -inf, -inf,
+         -inf, -inf, -inf, -inf, -inf, -inf],
+        [0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., -inf, -inf, -inf, -inf, -inf, -inf,
+         -inf, -inf, -inf, -inf, -inf, -inf],
+        [0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., -inf, -inf, -inf, -inf, -inf,
+         -inf, -inf, -inf, -inf, -inf, -inf],
+        [0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., -inf, -inf, -inf, -inf,
+         -inf, -inf, -inf, -inf, -inf, -inf],
+        [0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., -inf, -inf, -inf,
+         -inf, -inf, -inf, -inf, -inf, -inf],
+        [0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., -inf, -inf,
+         -inf, -inf, -inf, -inf, -inf, -inf],
+        [0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., -inf,
+         -inf, -inf, -inf, -inf, -inf, -inf],
+        [0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.,
+         -inf, -inf, -inf, -inf, -inf, -inf],
+        [0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.,
+         0., -inf, -inf, -inf, -inf, -inf],
+        [0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.,
+         0., 0., -inf, -inf, -inf, -inf],
+        [0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.,
+         0., 0., 0., -inf, -inf, -inf],
+        [0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.,
+         0., 0., 0., 0., -inf, -inf],
+        [0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.,
+         0., 0., 0., 0., 0., -inf],
+        [0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.,
+         0., 0., 0., 0., 0., 0.]], device='cuda:0')
+src_padding_mask
+tensor([[ True,  True,  True, False, False, False, False, False, False, False,
+         False, False, False, False, False, False, False, False, False, False,
+         False, False, False, False, False, False, False, False, False, False],
+        [ True,  True,  True, False, False, False, False, False, False, False,
+         False, False, False, False, False, False, False, False, False, False,
+         False, False, False, False, False, False, False, False, False, False]],
+       device='cuda:0')
+ 
+Positional encoding
+emb_size = 512
+maxlen = 5000
+batch_size = 64
+seq_len = 100   (the length of an input sequence in the forward pass)
+class PositionalEncoding(nn.Module):
+    def __init__(self, emb_size, dropout, maxlen=5000):
+        super(PositionalEncoding, self).__init__()
+
+        # pos: (maxlen, 1) -> (5000, 1)
+        # Creates a column vector of positions [0, 1, ..., 4999]
+        pos = torch.arange(maxlen).unsqueeze(1)
+
+        # i: (emb_size / 2,) -> (256,)
+        # Creates a row vector for the even dimension indices [0, 2, ..., 510]
+        i = torch.arange(0, emb_size, 2)
+
+        # angle_rates: (maxlen, emb_size / 2) -> (5000, 256)
+        # Calculates the arguments for sin/cos using broadcasting.
+        # (5000, 1) / (256,) results in a (5000, 256) matrix.
+        angle_rates = pos / (10000 ** (i.float() / emb_size))
+
+        # pos_encoding: (maxlen, emb_size) -> (5000, 512)
+        pos_encoding = torch.zeros(maxlen, emb_size)
+        
+        # Fills even indices (0, 2, ...) with sin values.
+        # The slice pos_encoding[:, 0::2] has shape (5000, 256).
+        pos_encoding[:, 0::2] = torch.sin(angle_rates)
+
+        # Fills odd indices (1, 3, ...) with cos values.
+        # The slice pos_encoding[:, 1::2] has shape (5000, 256).
+        pos_encoding[:, 1::2] = torch.cos(angle_rates)
+
+        # --- Finalizing and Storing ---
+        # pos_encoding: (maxlen, 1, emb_size) -> (5000, 1, 512)
+        # Adds a dimension for batch broadcasting in the forward pass.
+        pos_encoding = pos_encoding.unsqueeze(1)
+        
+        # Registers 'pos_encoding' as a buffer. It's part of the model's state
+        # but not a parameter to be trained.
+        self.register_buffer('pos_encoding', pos_encoding)
+        self.dropout = nn.Dropout(dropout)
+
+    def forward(self, token_embedding: Tensor):
+        # token_embedding (input): (seq_len, batch_size, emb_size) -> (100, 64, 512)
+        seq_len = token_embedding.size(0)
+
+        # Add positional encoding to token embedding.
+        # self.pos_encoding[:seq_len, :] slices the buffer to get shape (100, 1, 512).
+        # Broadcasting adds this to token_embedding (100, 64, 512).
+        # The result has shape (100, 64, 512).
+        output = token_embedding + self.pos_encoding[:seq_len, :]
+        return self.dropout(output)
+ 
+Token embedding
+The TokenEmbedding class below converts numerical tokens into embeddings:
+
+* math.sqrt(self.emb_size)
+From the original "Attention Is All You Need" paper. The output of the embedding lookup is scaled by the square root of the embedding size.
+class TokenEmbedding(nn.Module):
+    def __init__(self, vocab_size: int, emb_size):
+        super(TokenEmbedding, self).__init__()
+        # Creates a lookup table of shape (vocab_size, emb_size)
+        self.embedding = nn.Embedding(vocab_size, emb_size)
+        self.emb_size = emb_size
+
+    def forward(self, tokens: Tensor):
+        # Input 'tokens' shape: (seq_len, batch_size)
+        # Output shape: (seq_len, batch_size, emb_size)
+        return self.embedding(tokens.long()) * math.sqrt(self.emb_size)
+ 
+Custom GPT Model Architecture
+The CustomGPTModel class defines a transformer-based model architecture for generative pre-trained models. This model aims to generate text and perform various NLP tasks.
+
+class CustomGPTModel(nn.Module):
+    """
+    A custom GPT-style Transformer model for language generation.
+    """
+    def __init__(self, 
+                 vocab_size: int, 
+                 embed_size: int, 
+                 num_heads: int, 
+                 num_layers: int, 
+                 dropout: float = 0.1,
+                 max_seq_len: int = 5000):
+        super().__init__()
+        
+        # Input Embedding Pipeline
+        self.embedding_pipeline = nn.Sequential(
+            TokenEmbedding(vocab_size, embed_size),
+            PositionalEncoding(embed_size, dropout=dropout, maxlen=max_seq_len)
+        )
+
+        # Core Transformer Blocks
+        encoder_layer = nn.TransformerEncoderLayer(
+            d_model=embed_size, 
+            nhead=num_heads, 
+            dropout=dropout, 
+            batch_first=False     # Expects (seq_len, batch_size, embed_size)
+        )
+        self.transformer_encoder = nn.TransformerEncoder(
+            encoder_layer, 
+            num_layers=num_layers
+        )
+        
+        # Output Projection Layer
+        self.lm_head = nn.Linear(embed_size, vocab_size)
+
+        # Initialize weights after all layers are defined
+        self.init_weights()
+
+    def init_weights(self):
+        """Initializes model weights using Xavier uniform distribution."""
+        for p in self.parameters():
+            if p.dim() > 1:
+                nn.init.xavier_uniform_(p)
+
+    @staticmethod
+    def create_masks(src: Tensor, device):
+        """
+        Creates the causal (look-ahead) and padding masks for the source sequence.
+        """
+        seq_len = src.shape[0]
+        
+        # Causal mask: Prevents attending to future tokens.
+        # Shape: (seq_len, seq_len)
+        causal_mask = nn.Transformer.generate_square_subsequent_mask(seq_len, device=device)
+        
+        # Padding mask: Prevents attending to <pad> tokens.
+        # Shape: (batch_size, seq_len)
+        padding_mask = (src == PAD_IDX).transpose(0, 1)
+        
+        return causal_mask, padding_mask
+    
+
+    def forward(self, src: Tensor):
+        """
+        Defines the forward pass of the model.
+        
+        Args:
+            src (Tensor): Input tensor of token IDs.
+                          Shape: (seq_len, batch_size)
+        
+        Returns:
+            Tensor: Output logits over the vocabulary.
+                    Shape: (seq_len, batch_size, vocab_size)
+        """
+        # Create masks based on the input tensor.
+        src_mask, src_padding_mask = self.create_masks(src, device=src.device)
+        
+        # Prepare input: Apply token embedding and positional encoding.
+        # src shape: (seq_len, batch_size) -> (seq_len, batch_size, embed_size)
+        src_emb = self.embedding_pipeline(src)
+
+        # Pass through the main Transformer blocks.
+        # Shape remains: (seq_len, batch_size, embed_size)
+        output = self.transformer_encoder(
+            src_emb, 
+            mask=src_mask, 
+            src_key_padding_mask=src_padding_mask
+        )
+        
+        # Project to vocabulary space to get final logits.
+        # output shape: (seq_len, batch_size, embed_size) -> (seq_len, batch_size, vocab_size)
+        logits = self.lm_head(output)
+        
+        return logits
+a = [1, 2, 3, 4, 5]
+a[-15:]
+[1, 2, 3, 4, 5]
+def encode_prompt(
+    prompt: str, 
+    tokenizer,
+    vocab,
+    block_size,
+    device
+):
+    """
+    Encodes a string prompt into a tensor suitable for model input.
+
+    This function handles prompt validation, tokenization, truncation of long 
+    prompts, and conversion to a correctly shaped tensor on the specified device.
+
+    Returns:
+        Tensor: The encoded prompt as a tensor of shape (sequence_length, 1).
+    """
+    if not prompt or not prompt.strip():
+        raise ValueError("Prompt cannot be empty or contain only whitespace.")
+
+    tokens = tokenizer(prompt)
+
+    # Truncate from the left if prompt exceeds the block size
+    if len(tokens) > block_size:
+        tokens = tokens[-block_size:]
+
+    # Convert tokens to numerical indices
+    indices = vocab(tokens)
+    # Shape: [seq_len] -> [seq_len, 1]
+    return torch.tensor(indices, dtype=torch.long, device=device).unsqueeze(1)
+ 
+def decode_tokens(token_ids, vocab):
+    id_list = token_ids.flatten().tolist()
+    tokens = vocab.get_itos()(id_list)
+    return " ".join(tokens)
+@torch.no_grad()
+def generate_text(
+    model,
+    prompt,
+    tokenizer,
+    vocab,
+    block_size,
+    max_new_tokens,
+    device
+):
+    """
+    Generates a sequence of text autoregressively using a trained model.
+
+    Returns:
+        str: The generated text, including the prompt.
+    """
+    model.eval()
+
+    # Encode the initial prompt
+    context = encode_prompt(
+        prompt=prompt,
+        tokenizer=tokenizer,
+        vocab=vocab,
+        block_size=block_size,
+        device=device
+    ) # Shape: (prompt_len, 1)
+
+    # The autoregressive generation loop
+    for _ in range(max_new_tokens):
+        context_cond = context[-block_size:]
+        
+        # Forward pass with the conditioned context
+        # logits shape: (current_seq_len, 1, vocab_size)
+        logits = model(context_cond)
+
+        # Get logits for the very last token in the sequence
+        # Shape: (1, vocab_size)
+        last_token_logits = logits[-1, :, :]
+        
+        # Greedily select the most likely next token
+        # Shape: (1, 1)
+        next_token = torch.argmax(last_token_logits, dim=-1, keepdim=True)
+        
+        # Check for end-of-sequence token
+        if next_token.item() == EOS_IDX:
+            break
+            
+        # Append the predicted token to the running sequence
+        context = torch.cat([context, next_token], dim=0)
+
+    # Decode the final sequence of token IDs back to a string
+    generated_text = decode_tokens(context, vocab)
+    
+    return generated_text
+ 
+ 
+tokenizer
+<function torchtext.data.utils._basic_english_normalize(line)>
+DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+VOCAB_SIZE = len(vocab)
+EMBED_SIZE = 256
+NUM_HEADS = 2
+NUM_LAYERS = 2
+BLOCK_SIZE = 10
+DROPOUT = 0.1
+
+# Instantiate the Model
+model = CustomGPTModel(
+    vocab_size=VOCAB_SIZE,
+    embed_size=EMBED_SIZE,
+    num_heads=NUM_HEADS,
+    num_layers=NUM_LAYERS,
+    max_seq_len=BLOCK_SIZE,
+    dropout=DROPOUT
+).to(DEVICE)
+prompt = "The sun rises in the"
+print(f"--- Prompt --- \n{prompt}\n")
+
+generated_text = generate_text(
+    model=model,
+    prompt=prompt,
+    tokenizer=tokenizer,
+    vocab=vocab,
+    block_size=BLOCK_SIZE,
+    max_new_tokens=100,
+    device=DEVICE
+)
+
+print(f"--- Generated Text --- \n{generated_text}")
+--- Prompt --- 
+The sun rises in the
+
+--- Generated Text --- 
+pseudo-shocking pseudo-shocking pseudo-shocking pseudo-shocking pseudo-shocking pseudo-shocking pseudo-shocking pseudo-shocking pseudo-shocking pseudo-shocking pseudo-shocking
+ 
+def train_one_epoch(
+    model,
+    dataloader,
+    criterion,
+    optimizer,
+    scheduler,
+    device
+):
+    """
+    Trains the GPT-style language model for one epoch.
+    """
+    model.train()
+    total_loss = 0.0
+    progress_bar = tqdm(dataloader, desc="Training Epoch")
+
+    for src, tgt in progress_bar:
+        src, tgt = src.to(device), tgt.to(device)
+
+        # Forward pass
+        logits = model(src)
+
+        # Reshape for loss calculation
+        # logits: [seq_len, batch_size, vocab_size] -> [seq_len * batch_size, vocab_size]
+        # tgt:    [seq_len, batch_size] -> [seq_len * batch_size]
+        logits_flat = logits.reshape(-1, logits.shape[-1])
+        loss = criterion(logits_flat, tgt.reshape(-1))
+
+        # Backward pass and optimization
+        optimizer.zero_grad()
+        loss.backward()
+        torch.nn.utils.clip_grad_norm_(model.parameters(), 0.5)
+        optimizer.step()
+        scheduler.step()
+
+        total_loss += loss.item()
+        progress_bar.set_postfix(loss=loss.item())
+
+    return total_loss / len(dataloader)
+ 
+def evaluate(
+    model: nn.Module,
+    dataloader: DataLoader,
+    criterion: nn.Module,
+    device: torch.device
+) -> Tuple[float, float, float]:
+    """
+    Evaluates the GPT-style language model.
+    
+    Returns:
+        Tuple[float, float, float]: Average loss, accuracy, and perplexity.
+    """
+    model.eval()
+    total_loss = 0.0
+    total_correct = 0
+    total_tokens = 0
+
+    with torch.no_grad():
+        progress_bar = tqdm(dataloader, desc="Evaluating")
+        for src, tgt in progress_bar:
+            src, tgt = src.to(device), tgt.to(device)
+
+            logits = model(src)
+            
+            # --- Loss Calculation ---
+            logits_flat = logits.reshape(-1, logits.shape[-1])
+            tgt_flat = tgt.reshape(-1)
+            loss = criterion(logits_flat, tgt_flat)
+            total_loss += loss.item()
+
+            # --- Accuracy Calculation (Per-Token) ---
+            preds = torch.argmax(logits_flat, dim=1)
+            non_pad_mask = (tgt_flat != PAD_IDX)
+            total_correct += (preds[non_pad_mask] == tgt_flat[non_pad_mask]).sum().item()
+            total_tokens += non_pad_mask.sum().item()
+
+    avg_loss = total_loss / len(dataloader)
+    accuracy = total_correct / total_tokens if total_tokens > 0 else 0
+    perplexity = math.exp(avg_loss)
+    
+    return avg_loss, accuracy, perplexity
+ 
+ 
+DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+VOCAB_SIZE = len(vocab)
+EMBED_SIZE = 256
+NUM_HEADS = 2
+NUM_LAYERS = 2
+DROPOUT = 0.1
+MAX_SEQ_LEN = 512
+LEARNING_RATE = 0.0001
+NUM_EPOCHS = 3
+BATCH_SIZE = 32
+
+UNK_IDX, PAD_IDX, EOS_IDX = 0, 1, 2
+
+
+train_dataloader = DataLoader(train_data, batch_size=BATCH_SIZE, shuffle=True, collate_fn=collate_batch)
+val_dataloader = DataLoader(val_data, batch_size=BATCH_SIZE, shuffle=True, collate_fn=collate_batch)
+
+
+loss_fn = nn.CrossEntropyLoss(ignore_index=PAD_IDX)
+optimizer = torch.optim.AdamW(model.parameters(), lr=LEARNING_RATE)
+
+
+# A simple learning rate scheduler
+scheduler = StepLR(optimizer, step_size=1.0, gamma=0.95)
+
+print("Initializing model...")
+model = CustomGPTModel(
+    vocab_size=VOCAB_SIZE,
+    embed_size=EMBED_SIZE,
+    num_heads=NUM_HEADS,
+    num_layers=NUM_LAYERS,
+    dropout=DROPOUT,
+    max_seq_len=MAX_SEQ_LEN
+).to(DEVICE)
+Initializing model...
+ 
+ 
+print("Starting training...")
+best_val_loss = float('inf')
+
+for epoch in range(1, NUM_EPOCHS + 1):
+    epoch_start_time = time.time()
+
+    train_loss = train_one_epoch(model, train_dataloader, loss_fn, optimizer, scheduler, DEVICE)
+
+    val_loss, val_accuracy, val_perplexity = evaluate(model, val_dataloader, loss_fn, DEVICE)
+
+    epoch_duration = time.time() - epoch_start_time
+    
+    # --- 5. LOGGING RESULTS ---
+    print("-" * 60)
+    print(f"| End of Epoch {epoch:3d} | Time: {epoch_duration:5.2f}s | "
+          f"Train Loss: {train_loss:5.3f} | Val Loss: {val_loss:5.3f} | "
+          f"Val PPL: {val_perplexity:8.2f} | Val Acc: {val_accuracy*100:5.2f}%")
+    print("-" * 60)
+Training Epoch:   1%|          | 6/625 [00:00<00:10, 59.80it/s, loss=11.5]
+Starting training...
+Training Epoch: 100%|██████████| 625/625 [00:10<00:00, 60.59it/s, loss=11.5]
+Evaluating: 100%|██████████| 157/157 [00:01<00:00, 118.52it/s]
+Training Epoch:   1%|          | 7/625 [00:00<00:09, 61.96it/s, loss=11.5]
+------------------------------------------------------------
+| End of Epoch   1 | Time: 11.64s | Train Loss: 11.519 | Val Loss: 11.517 | Val PPL: 100443.22 | Val Acc:  0.00%
+------------------------------------------------------------
+Training Epoch: 100%|██████████| 625/625 [00:10<00:00, 60.60it/s, loss=11.5]
+Evaluating: 100%|██████████| 157/157 [00:01<00:00, 122.16it/s]
+Training Epoch:   1%|          | 7/625 [00:00<00:10, 61.07it/s, loss=11.5]
+------------------------------------------------------------
+| End of Epoch   2 | Time: 11.60s | Train Loss: 11.519 | Val Loss: 11.518 | Val PPL: 100499.13 | Val Acc:  0.00%
+------------------------------------------------------------
+Training Epoch: 100%|██████████| 625/625 [00:10<00:00, 60.71it/s, loss=11.5]
+Evaluating: 100%|██████████| 157/157 [00:01<00:00, 122.33it/s]
+------------------------------------------------------------
+| End of Epoch   3 | Time: 11.58s | Train Loss: 11.518 | Val Loss: 11.517 | Val PPL: 100440.23 | Val Acc:  0.00%
+------------------------------------------------------------
+ 
+prompt = "The meaning of life is"
+generated_text = generate_text(model, prompt, tokenizer, vocab, MAX_SEQ_LEN, 100, DEVICE)
+print("\n--- Example Generation ---")
+print(generated_text)
+--- Example Generation ---
+the meaning of life is spitied additive additive tarantinism tarantinism tarantinism tarantinism montford montford montford montford 15minutes 15minutes 15minutes 15minutes 15minutes 15minutes 15minutes 15minutes 15minutes struggles spanky montford confused confused confused --until --until rainforests rainforests rainforests rainforests rainforests tarantinism prepare prepare prepare prepare prepare prepare prepare prepare prepare prepare prepare rainforests rainforests rainforests rainforests rainforests rainforests rainforests rainforests semi-rural semi-rural semi-rural semi-rural rainforests rainforests rainforests rainforests rainforests pelicule pelicule pelicule rainforests rainforests rainforests rainforests rainforests sushant sushant tarantinism tarantinism t4 t4 t4 blecher blecher rainforests rainforests rainforests rainforests rainforests rainforests rainforests reviews reviews rainforests rainforests rainforests rainforests prosecutor boy-o-boy wisdom/knowledge wisdom/knowledge wisdom/knowledge reviews reviews reviews
+ 
+================================================================================================
+
+D:\Machine Learning Deep Learning\Github Repos\gpt\src\config.py
+
+import torch
+from torchtext.data.utils import get_tokenizer
+
+
+# EMBED_SIZE = 256      
+# VOCAB_SIZE = 39270
+# NUM_HEADS = 4     
+# NUM_LAYERS = 2     
+# DROPOUT = 0.1      
+# BLOCK_SIZE = 64
+# DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
+# BATCH_SIZE = 64
+
+
+
+EMBED_SIZE = 512 
+VOCAB_SIZE = 39270
+NUM_HEADS = 8  
+NUM_LAYERS = 4  
+DROPOUT = 0.15
+BLOCK_SIZE = 64
+DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
+BATCH_SIZE = 64
+
+
+UNK_IDX, PAD_IDX, EOS_IDX = 0, 1, 2
+special_symbols = ['<unk>', '<pad>', '<|endoftext|>']
+
+END_OF_TEXT_TOKEN = '<|endoftext|>'
+tokenizer = get_tokenizer("basic_english")
+PROCESSED_DATA_PATH = "data/processed_data.pkl"
+VOCAB_PATH = "artifacts/vocab.pth"
+
+================================================================================================
+
+D:\Machine Learning Deep Learning\Github Repos\gpt\src\dataloader.py
+import torch
+from torch.nn.utils.rnn import pad_sequence
+from torch.utils.data import DataLoader
+from typing import List, Tuple, Any, Callable
+from functools import partial
+import pickle
+import re
+import unicodedata
+
+
+
+def clean_text(text):
+    """
+    Completely cleans a text string.
+
+    """
+    text = str(text)
+    text = re.sub(r'<.*?>', '', text)
+    text = text.lower()
+    text = re.sub(r'http\S+|www\.\S+', '', text)
+    text = re.sub(r'\S+@\S+\.\S+', '', text)
+    text = re.sub(r'\d+', '', text)
+    text = re.sub(r'[^a-z\s]', '', text)
+    text = unicodedata.normalize('NFKD', text).encode('ascii', 'ignore').decode('utf-8', 'ignore')
+    text = re.sub(r'\s+', ' ', text).strip()
+
+    return text
+
+# --- Helper function (remains the same) ---
+def get_training_sample(
+    text: List[Any], 
+    block_size: int,
+    END_OF_TEXT_TOKEN: str
+) -> Tuple[List[Any], List[Any]]:
+    """Creates a single (input, target) training sample."""
+    text_len = len(text)
+    if text_len > block_size:
+        max_start_idx = text_len - block_size - 1
+        start_idx = torch.randint(low=0, high=max_start_idx + 1, size=(1,)).item()
+        end_idx = start_idx + block_size
+        src_sequence = text[start_idx:end_idx]
+        tgt_sequence = text[start_idx + 1:end_idx + 1]
+    else:
+        src_sequence = text
+        tgt_sequence = text[1:] + [END_OF_TEXT_TOKEN]
+    return src_sequence, tgt_sequence
+
+
+# --- Helper function (remains the same) ---
+def collate_batch(
+    batch: List[Tuple], 
+    tokenizer: Callable, 
+    vocab, 
+    block_size: int, 
+    device: torch.device, 
+    PAD_IDX: int, 
+    END_OF_TEXT_TOKEN: str
+):
+    """Collates a batch of text into source and target tensors."""
+    src_batch, tgt_batch = [], []
+    for _, text in batch:
+        text = clean_text(text)
+        src_seq, tgt_seq = get_training_sample(tokenizer(text), block_size, END_OF_TEXT_TOKEN)
+        src_indices = vocab(src_seq)
+        tgt_indices = vocab(tgt_seq)
+        src_batch.append(torch.tensor(src_indices, dtype=torch.int64))
+        tgt_batch.append(torch.tensor(tgt_indices, dtype=torch.int64))
+
+    src_padded = pad_sequence(src_batch, padding_value=PAD_IDX, batch_first=False)
+    tgt_padded = pad_sequence(tgt_batch, padding_value=PAD_IDX, batch_first=False)
+    return src_padded.to(device), tgt_padded.to(device)
+
+
+
+def get_dataloaders(
+    processed_data_path: str,
+    vocab_path: str,
+    tokenizer: Callable,
+    block_size: int,
+    batch_size: int,
+    device: torch.device,
+    PAD_IDX: int,
+    END_OF_TEXT_TOKEN: str
+):
+    """
+    Loads pre-processed data and creates train, validation, and test DataLoaders.
+    
+    Returns:
+        A tuple containing (train_dataloader, val_dataloader, test_dataloader, vocab).
+    """
+    print("Loading pre-processed data and vocabulary...")
+    with open(processed_data_path, 'rb') as f:
+        processed_data = pickle.load(f)
+    train_data = processed_data['train']
+    val_data = processed_data['val']
+    test_data = processed_data['test']
+    
+    vocab = torch.load(vocab_path)
+    print("Vocabulary Size:", len(vocab))
+    print("Loading complete.")
+
+    collate_fn = partial(
+        collate_batch,
+        tokenizer=tokenizer,
+        vocab=vocab,
+        block_size=block_size,
+        device=device,
+        PAD_IDX=PAD_IDX,
+        END_OF_TEXT_TOKEN=END_OF_TEXT_TOKEN
+    )
+
+    # Create the DataLoader instances
+    train_dataloader = DataLoader(train_data, batch_size=batch_size, shuffle=True, collate_fn=collate_fn)
+    val_dataloader = DataLoader(val_data, batch_size=batch_size, shuffle=False, collate_fn=collate_fn)
+    test_dataloader = DataLoader(test_data, batch_size=batch_size, shuffle=False, collate_fn=collate_fn)
+    
+    print("\n--- Inspecting a single batch from the train_dataloader ---")
+    
+    src_batch, tgt_batch = next(iter(train_dataloader))
+    
+    print(f"Shape of the source (src) batch:\t{src_batch.shape} -> [sequence_length, batch_size]")
+    print(f"Shape of the target (tgt) batch:\t{tgt_batch.shape} -> [sequence_length, batch_size]")
+    
+    first_src_example = src_batch[:, 0] # Shape: [sequence_length]
+    first_tgt_example = tgt_batch[:, 0] # Shape: [sequence_length]
+    
+    print(f"\n--- Inspecting the first example in the batch ---")
+    print(f"Shape of a single source example:\t{first_src_example.shape}")
+    
+    src_text = " ".join(vocab.lookup_tokens(first_src_example.tolist()))
+    tgt_text = " ".join(vocab.lookup_tokens(first_tgt_example.tolist()))
+    
+    print(f"\nDecoded Source (Input to Model):\n'{src_text}'")
+    print(f"\nDecoded Target (What Model Predicts):\n'{tgt_text}'")
+    print("-" * 60)
+    
+    return train_dataloader, val_dataloader, test_dataloader, vocab
+
+================================================================================================
+D:\Machine Learning Deep Learning\Github Repos\gpt\src\engine.py
+import math
+import torch
+from torch.utils.data import DataLoader
+from tqdm import tqdm
+
+from .config import *
+
+
+def train_one_epoch(
+    model,
+    dataloader,
+    criterion,
+    optimizer,
+    scheduler,
+    device
+):
+    """
+    Trains the GPT-style language model for one epoch.
+    
+    Returns:
+        Tuple[float, float, float]: Average loss, accuracy, and perplexity for the epoch.
+    """
+    model.train()
+    total_loss = 0.0
+    total_correct = 0
+    total_tokens = 0
+
+    progress_bar = tqdm(dataloader, desc="Training Epoch")
+
+    for batch_idx, (src, tgt) in enumerate(progress_bar, start=1):
+        src, tgt = src.to(device), tgt.to(device)
+
+        # --- Forward pass and Loss ---
+        logits = model(src)
+        logits_flat = logits.reshape(-1, logits.shape[-1])
+        tgt_flat = tgt.reshape(-1)
+        loss = criterion(logits_flat, tgt_flat)
+
+        # --- Backward pass and Optimization ---
+        optimizer.zero_grad()
+        loss.backward()
+        torch.nn.utils.clip_grad_norm_(model.parameters(), 0.5)
+        optimizer.step()
+        scheduler.step()
+
+        # --- Update Metrics ---
+        total_loss += loss.item()
+        
+        preds = torch.argmax(logits_flat, dim=1)
+        non_pad_mask = (tgt_flat != PAD_IDX)
+        total_correct += (preds[non_pad_mask] == tgt_flat[non_pad_mask]).sum().item()
+        total_tokens += non_pad_mask.sum().item()
+        
+        running_loss = total_loss / batch_idx
+        running_acc = total_correct / total_tokens if total_tokens > 0 else 0
+
+        # Live update in tqdm bar
+        progress_bar.set_postfix({
+            "loss": f"{running_loss:.4f}",
+            "acc": f"{running_acc:.4f}"
+        })
+
+    # --- Calculate final epoch metrics ---
+    avg_loss = total_loss / len(dataloader)
+    accuracy = total_correct / total_tokens if total_tokens > 0 else 0
+    perplexity = math.exp(avg_loss)
+    
+    return avg_loss, accuracy, perplexity
+
+
+def evaluate(
+    model,
+    dataloader,
+    criterion,
+    device
+):
+    """
+    Evaluates the GPT-style language model.
+    
+    Returns:
+        Tuple[float, float, float]: Average loss, accuracy, and perplexity.
+    """
+    model.eval()
+    total_loss = 0.0
+    total_correct = 0
+    total_tokens = 0
+
+    with torch.no_grad():
+        progress_bar = tqdm(dataloader, desc="Evaluating")
+        for src, tgt in progress_bar:
+            src, tgt = src.to(device), tgt.to(device)
+
+            logits = model(src)
+            
+            # --- Loss Calculation ---
+            logits_flat = logits.reshape(-1, logits.shape[-1])
+            tgt_flat = tgt.reshape(-1)
+            loss = criterion(logits_flat, tgt_flat)
+            total_loss += loss.item()
+
+            # --- Accuracy Calculation (Per-Token) ---
+            preds = torch.argmax(logits_flat, dim=1)
+            non_pad_mask = (tgt_flat != PAD_IDX)
+            total_correct += (preds[non_pad_mask] == tgt_flat[non_pad_mask]).sum().item()
+            total_tokens += non_pad_mask.sum().item()
+
+    avg_loss = total_loss / len(dataloader)
+    accuracy = total_correct / total_tokens if total_tokens > 0 else 0
+    
+    try:
+        perplexity = math.exp(avg_loss)
+    except OverflowError:
+        perplexity = float("inf")
+    
+    return avg_loss, accuracy, perplexity
+
+================================================================================================
+D:\Machine Learning Deep Learning\Github Repos\gpt\src\model.py
+
+import torch
+import torch.nn as nn
+from torch import Tensor
+
+from .modules import TokenEmbedding, PositionalEncoding
+from .config import PAD_IDX
+
+
+class CustomGPTModel(nn.Module):
+    """
+    A custom GPT-style Transformer model for language generation.
+    """
+    def __init__(self, 
+                 vocab_size: int, 
+                 embed_size: int, 
+                 num_heads: int, 
+                 num_layers: int, 
+                 dropout: float = 0.1,
+                 max_seq_len: int = 512):
+        super().__init__()
+        
+        # Input Embedding Pipeline
+        self.embedding_pipeline = nn.Sequential(
+            TokenEmbedding(vocab_size, embed_size),
+            PositionalEncoding(embed_size, dropout=dropout, maxlen=max_seq_len)
+        )
+
+        # Core Transformer Blocks
+        encoder_layer = nn.TransformerEncoderLayer(
+            d_model=embed_size, 
+            nhead=num_heads, 
+            dropout=dropout, 
+            batch_first=False     # Expects (seq_len, batch_size, embed_size)
+        )
+        self.transformer_encoder = nn.TransformerEncoder(
+            encoder_layer, 
+            num_layers=num_layers
+        )
+        
+        # Output Projection Layer
+        self.lm_head = nn.Linear(embed_size, vocab_size)
+
+        # Initialize weights after all layers are defined
+        self.init_weights()
+
+    def init_weights(self):
+        """Initializes model weights using Xavier uniform distribution."""
+        for p in self.parameters():
+            if p.dim() > 1:
+                nn.init.xavier_uniform_(p)
+
+    @staticmethod
+    def create_masks(src: Tensor, device):
+        """
+        Creates the causal (look-ahead) and padding masks for the source sequence.
+        """
+        seq_len = src.shape[0]
+        
+        # Causal mask: Prevents attending to future tokens.
+        # Shape: (seq_len, seq_len)
+        causal_mask = nn.Transformer.generate_square_subsequent_mask(seq_len, device=device)
+        
+        # Padding mask: Prevents attending to <pad> tokens.
+        # Shape: (batch_size, seq_len)
+        padding_mask = (src == PAD_IDX).transpose(0, 1)
+        
+        return causal_mask, padding_mask
+    
+
+    def forward(self, src: Tensor):
+        """
+        Defines the forward pass of the model.
+        
+        Args:
+            src (Tensor): Input tensor of token IDs.
+                          Shape: (seq_len, batch_size)
+        
+        Returns:
+            Tensor: Output logits over the vocabulary.
+                    Shape: (seq_len, batch_size, vocab_size)
+        """
+        # Create masks based on the input tensor.
+        src_mask, src_padding_mask = self.create_masks(src, device=src.device)
+        
+        # Prepare input: Apply token embedding and positional encoding.
+        # src shape: (seq_len, batch_size) -> (seq_len, batch_size, embed_size)
+        src_emb = self.embedding_pipeline(src)
+
+        # Pass through the main Transformer blocks.
+        # Shape remains: (seq_len, batch_size, embed_size)
+        output = self.transformer_encoder(
+            src_emb, 
+            mask=src_mask, 
+            src_key_padding_mask=src_padding_mask
+        )
+        
+        # Project to vocabulary space to get final logits.
+        # output shape: (seq_len, batch_size, embed_size) -> (seq_len, batch_size, vocab_size)
+        logits = self.lm_head(output)
+        
+        return logits
+
+================================================================================================
+D:\Machine Learning Deep Learning\Github Repos\gpt\src\modules.py
+
+import torch
+import torch.nn as nn
+from torch import Tensor
+import math
+
+
+# emb_size = 512
+# maxlen = 5000
+# batch_size = 64
+# seq_len = 100   (the length of an input sequence in the forward pass)
+
+class PositionalEncoding(nn.Module):
+    def __init__(self, emb_size, dropout, maxlen=5000):
+        super(PositionalEncoding, self).__init__()
+
+        # pos: (maxlen, 1) -> (5000, 1)
+        # Creates a column vector of positions [0, 1, ..., 4999]
+        pos = torch.arange(maxlen).unsqueeze(1)
+
+        # i: (emb_size / 2,) -> (256,)
+        # Creates a row vector for the even dimension indices [0, 2, ..., 510]
+        i = torch.arange(0, emb_size, 2)
+
+        # angle_rates: (maxlen, emb_size / 2) -> (5000, 256)
+        # Calculates the arguments for sin/cos using broadcasting.
+        # (5000, 1) / (256,) results in a (5000, 256) matrix.
+        angle_rates = pos / (10000 ** (i.float() / emb_size))
+
+        # pos_encoding: (maxlen, emb_size) -> (5000, 512)
+        pos_encoding = torch.zeros(maxlen, emb_size)
+        
+        # Fills even indices (0, 2, ...) with sin values.
+        # The slice pos_encoding[:, 0::2] has shape (5000, 256).
+        pos_encoding[:, 0::2] = torch.sin(angle_rates)
+
+        # Fills odd indices (1, 3, ...) with cos values.
+        # The slice pos_encoding[:, 1::2] has shape (5000, 256).
+        pos_encoding[:, 1::2] = torch.cos(angle_rates)
+
+        # --- Finalizing and Storing ---
+        # pos_encoding: (maxlen, 1, emb_size) -> (5000, 1, 512)
+        # Adds a dimension for batch broadcasting in the forward pass.
+        pos_encoding = pos_encoding.unsqueeze(1)
+        
+        # Registers 'pos_encoding' as a buffer. It's part of the model's state
+        # but not a parameter to be trained.
+        self.register_buffer('pos_encoding', pos_encoding)
+        self.dropout = nn.Dropout(dropout)
+
+    def forward(self, token_embedding: Tensor):
+        # token_embedding (input): (seq_len, batch_size, emb_size) -> (100, 64, 512)
+        seq_len = token_embedding.size(0)
+
+        # Add positional encoding to token embedding.
+        # self.pos_encoding[:seq_len, :] slices the buffer to get shape (100, 1, 512).
+        # Broadcasting adds this to token_embedding (100, 64, 512).
+        # The result has shape (100, 64, 512).
+        output = token_embedding + self.pos_encoding[:seq_len, :]
+        return self.dropout(output)
+    
+    
+
+class TokenEmbedding(nn.Module):
+    def __init__(self, vocab_size: int, emb_size):
+        super(TokenEmbedding, self).__init__()
+        # Creates a lookup table of shape (vocab_size, emb_size)
+        self.embedding = nn.Embedding(vocab_size, emb_size)
+        self.emb_size = emb_size
+
+    def forward(self, tokens: Tensor):
+        # Input 'tokens' shape: (seq_len, batch_size)
+        # Output shape: (seq_len, batch_size, emb_size)
+        return self.embedding(tokens.long()) * math.sqrt(self.emb_size)
+
+================================================================================================
+D:\Machine Learning Deep Learning\Github Repos\gpt\src\utils.py
+
+import torch
+import logging
+import sys
+
+EOS_IDX = 2
+
+
+def encode_prompt(
+    prompt, 
+    tokenizer,
+    vocab,
+    block_size,
+    device
+):
+    """
+    Encodes a string prompt into a tensor suitable for model input.
+
+    This function handles prompt validation, tokenization, truncation of long 
+    prompts, and conversion to a correctly shaped tensor on the specified device.
+
+    Returns:
+        Tensor: The encoded prompt as a tensor of shape (sequence_length, 1).
+    """
+    if not prompt or not prompt.strip():
+        raise ValueError("Prompt cannot be empty or contain only whitespace.")
+
+    tokens = tokenizer(prompt)
+
+    if len(tokens) > block_size:
+        tokens = tokens[-block_size:]
+
+    indices = vocab(tokens)
+    # Shape: [seq_len] -> [seq_len, 1]
+    return torch.tensor(indices, dtype=torch.long, device=device).unsqueeze(1)
+
+
+
+
+def decode_tokens(token_ids, vocab):
+    id_list = token_ids.flatten().tolist()
+    tokens = vocab.lookup_tokens(id_list)
+    return " ".join(tokens)
+
+
+
+@torch.no_grad()
+def generate_text(
+    model,
+    prompt,
+    tokenizer,
+    vocab,
+    block_size,
+    max_new_tokens,
+    device
+):
+    """
+    Generates a sequence of text autoregressively using a trained model.
+
+    Returns:
+        str: The generated text, including the prompt.
+    """
+    model.eval()
+
+    # Encode the initial prompt
+    context = encode_prompt(
+        prompt=prompt,
+        tokenizer=tokenizer,
+        vocab=vocab,
+        block_size=block_size,
+        device=device
+    ) # Shape: (prompt_len, 1)
+
+    # The autoregressive generation loop
+    for _ in range(max_new_tokens):
+        context_cond = context[-block_size:]
+        
+        # Forward pass with the conditioned context
+        # logits shape: (current_seq_len, 1, vocab_size)
+        logits = model(context_cond)
+
+        # Get logits for the very last token in the sequence
+        # Shape: (1, vocab_size)
+        last_token_logits = logits[-1, :, :]
+        
+        # Greedily select the most likely next token
+        # Shape: (1, 1)
+        next_token = torch.argmax(last_token_logits, dim=-1, keepdim=True)
+        
+        # Check for end-of-sequence token
+        if next_token.item() == EOS_IDX:
+            break
+            
+        # Append the predicted token to the running sequence
+        context = torch.cat([context, next_token], dim=0)
+
+    # Decode the final sequence of token IDs back to a string
+    generated_text = decode_tokens(context, vocab)
+    
+    return generated_text
+
+
+
+def setup_logging(log_file_path):
+    """Sets up the logging to output to console and a file."""
+    logger = logging.getLogger('training_logger')
+    logger.setLevel(logging.INFO)
+
+    file_handler = logging.FileHandler(log_file_path)
+    file_handler.setLevel(logging.INFO)
+
+    console_handler = logging.StreamHandler(sys.stdout)
+    console_handler.setLevel(logging.INFO)
+
+    formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+    file_handler.setFormatter(formatter)
+    console_handler.setFormatter(formatter)
+
+    if not logger.handlers:
+        logger.addHandler(file_handler)
+        logger.addHandler(console_handler)
+    
+    return logger
+================================================================================================
+
+D:\Machine Learning Deep Learning\Github Repos\gpt\scripts\prepare_data.py
+
+import torch
+from torch.utils.data import random_split
+from torchtext.data.utils import get_tokenizer
+from torchtext.vocab import build_vocab_from_iterator
+import os
+import re
+import unicodedata
+import pickle
+
+# --- Configuration ---
+RAW_DATA_PATH = "data/imdb_dataset.pt"
+PROCESSED_DATA_PATH = "data/processed_data.pkl"
+ARTIFACTS_DIR = "artifacts"
+VOCAB_PATH = os.path.join(ARTIFACTS_DIR, "vocab.pth")
+
+UNK_IDX, PAD_IDX, EOS_IDX = 0, 1, 2
+special_symbols = ['<unk>', '<pad>', '<|endoftext|>']
+tokenizer = get_tokenizer("basic_english")
+
+def clean_text(text):
+    """
+    Completely cleans a text string.
+
+    """
+    text = str(text)
+    text = re.sub(r'<.*?>', '', text)
+    text = text.lower()
+    text = re.sub(r'http\S+|www\.\S+', '', text)
+    text = re.sub(r'\S+@\S+\.\S+', '', text)
+    text = re.sub(r'\d+', '', text)
+    text = re.sub(r'[^a-z\s]', '', text)
+    text = unicodedata.normalize('NFKD', text).encode('ascii', 'ignore').decode('utf-8', 'ignore')
+    text = re.sub(r'\s+', ' ', text).strip()
+
+    return text
+
+
+# --- Load and Split Raw Data ---
+print("Loading raw data...")
+train_data_raw, test_data_raw = torch.load(RAW_DATA_PATH)
+print(f"Original train size: {len(train_data_raw)}, Test size: {len(test_data_raw)}")
+
+all_data = train_data_raw + test_data_raw
+print(f"Total combined data size: {len(all_data)}")
+
+torch.manual_seed(42)
+new_train_size = int(0.8 * len(all_data))
+new_val_size = int(0.1 * len(all_data))
+new_test_size = len(all_data) - new_train_size - new_val_size
+
+train_data, val_data, test_data = random_split(
+    all_data, [new_train_size, new_val_size, new_test_size]
+)
+print(f"New split sizes -> Train: {len(train_data)}, Val: {len(val_data)}, Test: {len(test_data)}")
+
+# --- Build and Save Vocabulary ---
+print("\nBuilding vocabulary from the training data...")
+def yield_tokens(data_iter):
+    for _, data_sample in data_iter:
+        cleaned_sample = clean_text(data_sample)
+        yield tokenizer(cleaned_sample)
+
+# Build vocab only on the training set
+vocab = build_vocab_from_iterator(yield_tokens(train_data), specials=special_symbols, min_freq=5)
+vocab.set_default_index(UNK_IDX)
+print("\nvocabulary Length:", len(vocab))
+
+os.makedirs(ARTIFACTS_DIR, exist_ok=True)
+torch.save(vocab, VOCAB_PATH)
+print(f"Vocabulary Length: {len(vocab)}")
+print(f"Vocabulary saved to: {VOCAB_PATH}")
+
+# --- Save Processed Datasets ---
+print(f"\nSaving new split datasets to {PROCESSED_DATA_PATH}...")
+processed_data = {
+    'train': train_data,
+    'val': val_data,
+    'test': test_data
+}
+with open(PROCESSED_DATA_PATH, 'wb') as f:
+    pickle.dump(processed_data, f)
+
+print("\nData preparation complete!")
+
+
+================================================================================================
+D:\Machine Learning Deep Learning\Github Repos\gpt\runs\epoch_1_30_logs.log
+
+2025-08-15 15:52:50,612 - INFO - Starting training for 30 epochs on device: cuda
+2025-08-15 15:59:30,448 - INFO - Starting training for 30 epochs on device: cuda
+2025-08-15 16:01:19,493 - INFO - Starting training for 30 epochs on device: cuda
+2025-08-15 16:03:16,534 - INFO - Starting training for 30 epochs on device: cuda
+2025-08-15 16:04:32,531 - INFO - Starting training for 30 epochs on device: cuda
+2025-08-15 16:11:23,235 - INFO - Starting training for 30 epochs on device: cuda
+2025-08-15 16:13:12,291 - INFO - Starting training for 30 epochs on device: cuda
+2025-08-15 16:13:50,998 - INFO - | Epoch   1/ 30 | Time: 38.71s | LR: 0.000084 | Train Loss: 8.691, PPL:  5947.41, Acc:  5.70% | Val Loss: 6.826, PPL:   921.06, Acc:  5.88% |
+2025-08-15 16:13:51,394 - INFO - -> New best model saved to 'runs/epoch_1_30/best_model.pth' with validation loss: 6.826
+2025-08-15 16:14:30,789 - INFO - | Epoch   2/ 30 | Time: 38.39s | LR: 0.000228 | Train Loss: 6.274, PPL:   530.75, Acc: 11.39% | Val Loss: 5.842, PPL:   344.30, Acc: 14.06% |
+2025-08-15 16:14:31,287 - INFO - -> New best model saved to 'runs/epoch_1_30/best_model.pth' with validation loss: 5.842
+2025-08-15 16:15:11,104 - INFO - | Epoch   3/ 30 | Time: 38.50s | LR: 0.000300 | Train Loss: 5.733, PPL:   308.92, Acc: 14.84% | Val Loss: 5.536, PPL:   253.70, Acc: 16.00% |
+2025-08-15 16:15:11,615 - INFO - -> New best model saved to 'runs/epoch_1_30/best_model.pth' with validation loss: 5.536
+2025-08-15 16:15:51,448 - INFO - | Epoch   4/ 30 | Time: 38.50s | LR: 0.000299 | Train Loss: 5.488, PPL:   241.75, Acc: 16.24% | Val Loss: 5.370, PPL:   214.94, Acc: 16.95% |
+2025-08-15 16:15:51,970 - INFO - -> New best model saved to 'runs/epoch_1_30/best_model.pth' with validation loss: 5.370
+2025-08-15 16:16:31,669 - INFO - | Epoch   5/ 30 | Time: 38.35s | LR: 0.000296 | Train Loss: 5.323, PPL:   204.95, Acc: 17.19% | Val Loss: 5.276, PPL:   195.57, Acc: 17.55% |
+2025-08-15 16:16:32,210 - INFO - -> New best model saved to 'runs/epoch_1_30/best_model.pth' with validation loss: 5.276
+2025-08-15 16:17:12,097 - INFO - | Epoch   6/ 30 | Time: 38.54s | LR: 0.000291 | Train Loss: 5.207, PPL:   182.48, Acc: 17.87% | Val Loss: 5.212, PPL:   183.49, Acc: 18.13% |
+2025-08-15 16:17:12,607 - INFO - -> New best model saved to 'runs/epoch_1_30/best_model.pth' with validation loss: 5.212
+2025-08-15 16:17:52,181 - INFO - | Epoch   7/ 30 | Time: 38.29s | LR: 0.000284 | Train Loss: 5.112, PPL:   165.96, Acc: 18.42% | Val Loss: 5.151, PPL:   172.55, Acc: 18.50% |
+2025-08-15 16:17:52,684 - INFO - -> New best model saved to 'runs/epoch_1_30/best_model.pth' with validation loss: 5.151
+2025-08-15 16:18:32,259 - INFO - | Epoch   8/ 30 | Time: 38.31s | LR: 0.000275 | Train Loss: 5.038, PPL:   154.20, Acc: 18.81% | Val Loss: 5.119, PPL:   167.24, Acc: 18.82% |
+2025-08-15 16:18:32,771 - INFO - -> New best model saved to 'runs/epoch_1_30/best_model.pth' with validation loss: 5.119
+2025-08-15 16:19:12,551 - INFO - | Epoch   9/ 30 | Time: 38.41s | LR: 0.000265 | Train Loss: 4.970, PPL:   144.07, Acc: 19.22% | Val Loss: 5.079, PPL:   160.68, Acc: 19.16% |
+2025-08-15 16:19:13,076 - INFO - -> New best model saved to 'runs/epoch_1_30/best_model.pth' with validation loss: 5.079
+2025-08-15 16:19:52,753 - INFO - | Epoch  10/ 30 | Time: 38.32s | LR: 0.000253 | Train Loss: 4.909, PPL:   135.44, Acc: 19.54% | Val Loss: 5.074, PPL:   159.79, Acc: 19.12% |
+2025-08-15 16:19:53,310 - INFO - -> New best model saved to 'runs/epoch_1_30/best_model.pth' with validation loss: 5.074
+2025-08-15 16:20:32,991 - INFO - | Epoch  11/ 30 | Time: 38.30s | LR: 0.000240 | Train Loss: 4.858, PPL:   128.83, Acc: 19.82% | Val Loss: 5.059, PPL:   157.36, Acc: 19.33% |
+2025-08-15 16:20:33,520 - INFO - -> New best model saved to 'runs/epoch_1_30/best_model.pth' with validation loss: 5.059
+2025-08-15 16:21:13,292 - INFO - | Epoch  12/ 30 | Time: 38.39s | LR: 0.000225 | Train Loss: 4.806, PPL:   122.27, Acc: 20.20% | Val Loss: 5.040, PPL:   154.41, Acc: 19.51% |
+2025-08-15 16:21:13,819 - INFO - -> New best model saved to 'runs/epoch_1_30/best_model.pth' with validation loss: 5.040
+2025-08-15 16:21:53,582 - INFO - | Epoch  13/ 30 | Time: 38.35s | LR: 0.000209 | Train Loss: 4.764, PPL:   117.21, Acc: 20.42% | Val Loss: 5.029, PPL:   152.73, Acc: 19.55% |
+2025-08-15 16:21:54,083 - INFO - -> New best model saved to 'runs/epoch_1_30/best_model.pth' with validation loss: 5.029
+2025-08-15 16:22:33,710 - INFO - | Epoch  14/ 30 | Time: 38.40s | LR: 0.000193 | Train Loss: 4.729, PPL:   113.14, Acc: 20.63% | Val Loss: 5.031, PPL:   153.12, Acc: 19.72% |
+2025-08-15 16:23:13,582 - INFO - | Epoch  15/ 30 | Time: 38.39s | LR: 0.000176 | Train Loss: 4.690, PPL:   108.88, Acc: 20.89% | Val Loss: 5.022, PPL:   151.70, Acc: 19.80% |
+2025-08-15 16:23:14,126 - INFO - -> New best model saved to 'runs/epoch_1_30/best_model.pth' with validation loss: 5.022
+2025-08-15 16:23:53,824 - INFO - | Epoch  16/ 30 | Time: 38.39s | LR: 0.000159 | Train Loss: 4.661, PPL:   105.72, Acc: 21.10% | Val Loss: 5.023, PPL:   151.85, Acc: 19.75% |
+2025-08-15 16:24:33,448 - INFO - | Epoch  17/ 30 | Time: 38.32s | LR: 0.000141 | Train Loss: 4.631, PPL:   102.62, Acc: 21.30% | Val Loss: 5.015, PPL:   150.67, Acc: 19.90% |
+2025-08-15 16:24:33,979 - INFO - -> New best model saved to 'runs/epoch_1_30/best_model.pth' with validation loss: 5.015
+2025-08-15 16:25:13,490 - INFO - | Epoch  18/ 30 | Time: 38.30s | LR: 0.000124 | Train Loss: 4.603, PPL:    99.75, Acc: 21.47% | Val Loss: 5.008, PPL:   149.66, Acc: 19.91% |
+2025-08-15 16:25:14,016 - INFO - -> New best model saved to 'runs/epoch_1_30/best_model.pth' with validation loss: 5.008
+2025-08-15 16:25:53,561 - INFO - | Epoch  19/ 30 | Time: 38.16s | LR: 0.000107 | Train Loss: 4.578, PPL:    97.34, Acc: 21.64% | Val Loss: 5.006, PPL:   149.30, Acc: 20.06% |
+2025-08-15 16:25:54,122 - INFO - -> New best model saved to 'runs/epoch_1_30/best_model.pth' with validation loss: 5.006
+2025-08-15 16:26:33,762 - INFO - | Epoch  20/ 30 | Time: 38.29s | LR: 0.000091 | Train Loss: 4.555, PPL:    95.09, Acc: 21.81% | Val Loss: 5.005, PPL:   149.18, Acc: 19.97% |
+2025-08-15 16:26:34,303 - INFO - -> New best model saved to 'runs/epoch_1_30/best_model.pth' with validation loss: 5.005
+2025-08-15 16:27:13,815 - INFO - | Epoch  21/ 30 | Time: 38.28s | LR: 0.000075 | Train Loss: 4.535, PPL:    93.21, Acc: 21.97% | Val Loss: 4.994, PPL:   147.48, Acc: 20.16% |
+2025-08-15 16:27:14,337 - INFO - -> New best model saved to 'runs/epoch_1_30/best_model.pth' with validation loss: 4.994
+2025-08-15 16:27:54,082 - INFO - | Epoch  22/ 30 | Time: 38.40s | LR: 0.000060 | Train Loss: 4.518, PPL:    91.68, Acc: 22.10% | Val Loss: 5.000, PPL:   148.43, Acc: 20.07% |
+2025-08-15 16:28:33,857 - INFO - | Epoch  23/ 30 | Time: 38.48s | LR: 0.000047 | Train Loss: 4.507, PPL:    90.66, Acc: 22.22% | Val Loss: 4.994, PPL:   147.57, Acc: 20.15% |
+2025-08-15 16:29:13,689 - INFO - | Epoch  24/ 30 | Time: 38.54s | LR: 0.000035 | Train Loss: 4.493, PPL:    89.41, Acc: 22.30% | Val Loss: 5.004, PPL:   148.97, Acc: 20.16% |
+2025-08-15 16:29:53,645 - INFO - | Epoch  25/ 30 | Time: 38.60s | LR: 0.000025 | Train Loss: 4.483, PPL:    88.51, Acc: 22.38% | Val Loss: 5.002, PPL:   148.69, Acc: 20.18% |
+2025-08-15 16:30:33,954 - INFO - | Epoch  26/ 30 | Time: 38.91s | LR: 0.000016 | Train Loss: 4.475, PPL:    87.82, Acc: 22.45% | Val Loss: 5.004, PPL:   148.98, Acc: 20.15% |
+2025-08-15 16:31:13,998 - INFO - | Epoch  27/ 30 | Time: 38.65s | LR: 0.000009 | Train Loss: 4.470, PPL:    87.39, Acc: 22.49% | Val Loss: 4.991, PPL:   147.07, Acc: 20.30% |
+2025-08-15 16:31:14,569 - INFO - -> New best model saved to 'runs/epoch_1_30/best_model.pth' with validation loss: 4.991
+2025-08-15 16:31:54,353 - INFO - | Epoch  28/ 30 | Time: 38.41s | LR: 0.000004 | Train Loss: 4.463, PPL:    86.79, Acc: 22.53% | Val Loss: 5.000, PPL:   148.35, Acc: 20.17% |
+2025-08-15 16:32:33,947 - INFO - | Epoch  29/ 30 | Time: 38.39s | LR: 0.000001 | Train Loss: 4.465, PPL:    86.96, Acc: 22.55% | Val Loss: 4.996, PPL:   147.82, Acc: 20.32% |
+2025-08-15 16:33:13,585 - INFO - | Epoch  30/ 30 | Time: 38.31s | LR: 0.000000 | Train Loss: 4.464, PPL:    86.85, Acc: 22.58% | Val Loss: 4.998, PPL:   148.06, Acc: 20.14% |
+================================================================================================
+
+
+D:\Machine Learning Deep Learning\Github Repos\gpt\runs\epoch_1_20_v2_logs.log
+
+
+2025-08-15 18:32:38,110 - INFO - Starting training for 30 epochs on device: cuda
+2025-08-15 18:33:42,258 - INFO - | Epoch   1/ 30 | Time: 64.15s | LR: 0.000000 | Train Loss: 10.517, PPL: 36955.60, Acc:  0.68% | Val Loss: 10.377, PPL: 32112.89, Acc:  5.82% |
+2025-08-15 18:33:43,053 - INFO - -> New best model saved to 'runs/epoch_1_20_v2/best_model.pth' with validation loss: 10.377
+2025-08-15 18:34:48,927 - INFO - | Epoch   2/ 30 | Time: 63.75s | LR: 0.000001 | Train Loss: 10.264, PPL: 28686.77, Acc:  5.83% | Val Loss: 10.048, PPL: 23107.38, Acc:  5.86% |
+2025-08-15 18:34:50,009 - INFO - -> New best model saved to 'runs/epoch_1_20_v2/best_model.pth' with validation loss: 10.048
+2025-08-15 18:37:39,835 - INFO - Starting training for 30 epochs on device: cuda
+2025-08-15 18:38:43,830 - INFO - | Epoch   1/ 30 | Time: 63.99s | LR: 0.000300 | Train Loss: 6.769, PPL:   870.32, Acc:  6.78% | Val Loss: 6.326, PPL:   559.09, Acc:  9.75% |
+2025-08-15 18:38:44,875 - INFO - -> New best model saved to 'runs/epoch_1_20_v2/best_model.pth' with validation loss: 6.326
+2025-08-15 18:39:51,648 - INFO - | Epoch   2/ 30 | Time: 63.89s | LR: 0.000300 | Train Loss: 6.166, PPL:   476.05, Acc: 11.01% | Val Loss: 5.926, PPL:   374.60, Acc: 12.65% |
+2025-08-15 18:39:52,663 - INFO - -> New best model saved to 'runs/epoch_1_20_v2/best_model.pth' with validation loss: 5.926
+2025-08-15 18:40:59,538 - INFO - | Epoch   3/ 30 | Time: 64.02s | LR: 0.000300 | Train Loss: 5.839, PPL:   343.29, Acc: 13.13% | Val Loss: 5.669, PPL:   289.73, Acc: 14.37% |
+2025-08-15 18:41:00,569 - INFO - -> New best model saved to 'runs/epoch_1_20_v2/best_model.pth' with validation loss: 5.669
+2025-08-15 18:42:07,372 - INFO - | Epoch   4/ 30 | Time: 63.90s | LR: 0.000300 | Train Loss: 5.608, PPL:   272.72, Acc: 14.79% | Val Loss: 5.493, PPL:   243.09, Acc: 15.88% |
+2025-08-15 18:42:08,471 - INFO - -> New best model saved to 'runs/epoch_1_20_v2/best_model.pth' with validation loss: 5.493
+2025-08-15 18:43:15,444 - INFO - | Epoch   5/ 30 | Time: 64.02s | LR: 0.000300 | Train Loss: 5.438, PPL:   229.93, Acc: 15.99% | Val Loss: 5.354, PPL:   211.47, Acc: 16.84% |
+2025-08-15 18:43:16,482 - INFO - -> New best model saved to 'runs/epoch_1_20_v2/best_model.pth' with validation loss: 5.354
+2025-08-15 18:44:23,313 - INFO - | Epoch   6/ 30 | Time: 63.93s | LR: 0.000300 | Train Loss: 5.295, PPL:   199.38, Acc: 16.98% | Val Loss: 5.256, PPL:   191.68, Acc: 17.67% |
+2025-08-15 18:44:24,347 - INFO - -> New best model saved to 'runs/epoch_1_20_v2/best_model.pth' with validation loss: 5.256
+2025-08-15 18:45:31,197 - INFO - | Epoch   7/ 30 | Time: 63.95s | LR: 0.000300 | Train Loss: 5.178, PPL:   177.40, Acc: 17.77% | Val Loss: 5.172, PPL:   176.19, Acc: 18.27% |
+2025-08-15 18:45:32,281 - INFO - -> New best model saved to 'runs/epoch_1_20_v2/best_model.pth' with validation loss: 5.172
+2025-08-15 18:46:39,038 - INFO - | Epoch   8/ 30 | Time: 63.88s | LR: 0.000300 | Train Loss: 5.076, PPL:   160.21, Acc: 18.42% | Val Loss: 5.118, PPL:   166.93, Acc: 18.75% |
+2025-08-15 18:46:40,072 - INFO - -> New best model saved to 'runs/epoch_1_20_v2/best_model.pth' with validation loss: 5.118
+2025-08-15 18:47:46,945 - INFO - | Epoch   9/ 30 | Time: 63.93s | LR: 0.000300 | Train Loss: 4.990, PPL:   146.88, Acc: 18.96% | Val Loss: 5.088, PPL:   162.07, Acc: 19.17% |
+2025-08-15 18:47:47,984 - INFO - -> New best model saved to 'runs/epoch_1_20_v2/best_model.pth' with validation loss: 5.088
+2025-08-15 18:48:54,804 - INFO - | Epoch  10/ 30 | Time: 63.91s | LR: 0.000300 | Train Loss: 4.915, PPL:   136.27, Acc: 19.42% | Val Loss: 5.044, PPL:   155.11, Acc: 19.53% |
+2025-08-15 18:48:55,832 - INFO - -> New best model saved to 'runs/epoch_1_20_v2/best_model.pth' with validation loss: 5.044
+2025-08-15 18:50:02,633 - INFO - | Epoch  11/ 30 | Time: 63.92s | LR: 0.000300 | Train Loss: 4.841, PPL:   126.61, Acc: 19.88% | Val Loss: 5.020, PPL:   151.35, Acc: 19.79% |
+2025-08-15 18:50:03,523 - INFO - -> New best model saved to 'runs/epoch_1_20_v2/best_model.pth' with validation loss: 5.020
+2025-08-15 18:51:10,422 - INFO - | Epoch  12/ 30 | Time: 63.94s | LR: 0.000300 | Train Loss: 4.780, PPL:   119.15, Acc: 20.23% | Val Loss: 5.013, PPL:   150.43, Acc: 19.84% |
+2025-08-15 18:51:11,472 - INFO - -> New best model saved to 'runs/epoch_1_20_v2/best_model.pth' with validation loss: 5.013
+2025-08-15 18:52:18,283 - INFO - | Epoch  13/ 30 | Time: 63.89s | LR: 0.000300 | Train Loss: 4.719, PPL:   112.05, Acc: 20.58% | Val Loss: 4.990, PPL:   146.95, Acc: 20.09% |
+2025-08-15 18:52:19,413 - INFO - -> New best model saved to 'runs/epoch_1_20_v2/best_model.pth' with validation loss: 4.990
+2025-08-15 18:53:26,310 - INFO - | Epoch  14/ 30 | Time: 63.95s | LR: 0.000300 | Train Loss: 4.662, PPL:   105.82, Acc: 21.01% | Val Loss: 4.985, PPL:   146.17, Acc: 20.15% |
+2025-08-15 18:53:27,365 - INFO - -> New best model saved to 'runs/epoch_1_20_v2/best_model.pth' with validation loss: 4.985
+2025-08-15 18:54:34,190 - INFO - | Epoch  15/ 30 | Time: 63.93s | LR: 0.000300 | Train Loss: 4.611, PPL:   100.56, Acc: 21.30% | Val Loss: 4.985, PPL:   146.27, Acc: 20.29% |
+2025-08-15 18:55:40,899 - INFO - | Epoch  16/ 30 | Time: 63.93s | LR: 0.000300 | Train Loss: 4.557, PPL:    95.33, Acc: 21.70% | Val Loss: 4.975, PPL:   144.80, Acc: 20.36% |
+2025-08-15 18:55:41,983 - INFO - -> New best model saved to 'runs/epoch_1_20_v2/best_model.pth' with validation loss: 4.975
+2025-08-15 18:56:48,935 - INFO - | Epoch  17/ 30 | Time: 64.10s | LR: 0.000300 | Train Loss: 4.512, PPL:    91.12, Acc: 22.02% | Val Loss: 4.967, PPL:   143.55, Acc: 20.41% |
+2025-08-15 18:56:49,964 - INFO - -> New best model saved to 'runs/epoch_1_20_v2/best_model.pth' with validation loss: 4.967
+2025-08-15 18:57:56,730 - INFO - | Epoch  18/ 30 | Time: 63.91s | LR: 0.000300 | Train Loss: 4.468, PPL:    87.18, Acc: 22.37% | Val Loss: 4.976, PPL:   144.92, Acc: 20.44% |
+2025-08-15 18:59:03,619 - INFO - | Epoch  19/ 30 | Time: 63.89s | LR: 0.000300 | Train Loss: 4.424, PPL:    83.46, Acc: 22.68% | Val Loss: 4.981, PPL:   145.67, Acc: 20.44% |
+2025-08-15 19:00:10,424 - INFO - | Epoch  20/ 30 | Time: 63.94s | LR: 0.000300 | Train Loss: 4.381, PPL:    79.95, Acc: 23.05% | Val Loss: 4.982, PPL:   145.70, Acc: 20.59% |
+2025-08-15 19:01:17,524 - INFO - | Epoch  21/ 30 | Time: 64.07s | LR: 0.000300 | Train Loss: 4.346, PPL:    77.13, Acc: 23.36% | Val Loss: 4.971, PPL:   144.21, Acc: 20.68% |
+2025-08-15 19:02:24,420 - INFO - | Epoch  22/ 30 | Time: 63.94s | LR: 0.000300 | Train Loss: 4.306, PPL:    74.12, Acc: 23.68% | Val Loss: 4.982, PPL:   145.70, Acc: 20.68% |
+================================================================================================
+
+
+
+
+================================================================================================
+D:\Machine Learning Deep Learning\Github Repos\gpt\notebooks\exp1.ipynb
+
+# !pip install torch==2.2.0
+# !pip install torchtext==0.17.2
+# !pip install torchdata==0.7.1
+# !pip install transformers==4.35.2
+# !pip install seaborn
+import os
+os.chdir("..")
+from src.dataloader import get_dataloaders
+from src.model import CustomGPTModel
+from src.engine import train_one_epoch, evaluate
+from src.utils import generate_text, setup_logging
+from src.config import *
+
+import torch
+import torch.nn as nn
+import time
+
+import matplotlib.pyplot as plt
+from typing import List
+ 
+EXPERIMENT_DIR = 'runs/epoch_1_30'
+os.makedirs(EXPERIMENT_DIR, exist_ok=True)
+best_model_path = os.path.join(EXPERIMENT_DIR, "best_model.pth")
+checkpoint_path = os.path.join(EXPERIMENT_DIR, "latest_checkpoint.pth")
+log_file_path = os.path.join(EXPERIMENT_DIR, "training.log")
+logger = setup_logging(log_file_path)
+train_dataloader, val_dataloader, test_dataloader, vocab = get_dataloaders(
+    processed_data_path=PROCESSED_DATA_PATH,
+    vocab_path=VOCAB_PATH,
+    tokenizer=tokenizer,
+    block_size=BLOCK_SIZE,
+    batch_size=BATCH_SIZE,
+    device=DEVICE,
+    PAD_IDX=PAD_IDX,
+    END_OF_TEXT_TOKEN=END_OF_TEXT_TOKEN
+)
+Loading pre-processed data and vocabulary...
+Vocabulary Size: 39270
+Loading complete.
+
+--- Inspecting a single batch from the train_dataloader ---
+Shape of the source (src) batch:	torch.Size([64, 64]) -> [sequence_length, batch_size]
+Shape of the target (tgt) batch:	torch.Size([64, 64]) -> [sequence_length, batch_size]
+
+--- Inspecting the first example in the batch ---
+Shape of a single source example:	torch.Size([64])
+
+Decoded Source (Input to Model):
+'however for the viewer who sits through this nonsensical trash there is absolutely nothing to love about this movieyou havent seen dysfunctional families until youve seen this bunch pa is crazy ma is crazy the son is crazy and the daughter is oh yeah crazy they also have mouths on them that utter words that would make a sailor blush especially the teenage <unk>'
+
+Decoded Target (What Model Predicts):
+'for the viewer who sits through this nonsensical trash there is absolutely nothing to love about this movieyou havent seen dysfunctional families until youve seen this bunch pa is crazy ma is crazy the son is crazy and the daughter is oh yeah crazy they also have mouths on them that utter words that would make a sailor blush especially the teenage <unk> addition'
+------------------------------------------------------------
+VOCAB_SIZE = len(vocab)
+VOCAB_SIZE
+39270
+model = CustomGPTModel(
+    vocab_size=VOCAB_SIZE,
+    embed_size=EMBED_SIZE,
+    num_heads=NUM_HEADS,
+    num_layers=NUM_LAYERS,
+    dropout=DROPOUT,
+    max_seq_len=BLOCK_SIZE
+).to(DEVICE)
+
+loss_fn = nn.CrossEntropyLoss(ignore_index=PAD_IDX)
+optimizer = torch.optim.AdamW(model.parameters(), lr=0.001)
+
+NUM_EPOCHS = 30 
+total_steps = len(train_dataloader) * NUM_EPOCHS
+scheduler = torch.optim.lr_scheduler.OneCycleLR(
+    optimizer,
+    max_lr=0.0003, 
+    total_steps=total_steps,
+    pct_start=0.1,    
+    anneal_strategy='cos'
+)
+ 
+train_losses, train_accuracies, train_perplexities = [], [], []
+val_losses, val_accuracies, val_perplexities = [], [], []
+
+start_epoch = 1
+best_val_loss = float('inf')
+
+logger.info(f"Starting training for {NUM_EPOCHS} epochs on device: {DEVICE}")
+
+for epoch in range(start_epoch, NUM_EPOCHS + 1):
+    epoch_start_time = time.time()
+
+    train_loss, train_acc, train_ppl = train_one_epoch(model, train_dataloader, loss_fn, optimizer, scheduler, DEVICE)
+    val_loss, val_acc, val_ppl = evaluate(model, val_dataloader, loss_fn, DEVICE)
+    
+    epoch_duration = time.time() - epoch_start_time
+    current_lr = optimizer.param_groups[0]['lr']
+
+    train_losses.append(train_loss)
+    train_accuracies.append(train_acc)
+    train_perplexities.append(train_ppl)
+    val_losses.append(val_loss)
+    val_accuracies.append(val_acc)
+    val_perplexities.append(val_ppl)
+
+    log_message = (
+    f"| Epoch {epoch:3d}/{NUM_EPOCHS:3d} | Time: {epoch_duration:5.2f}s | LR: {current_lr:.6f} | "
+    f"Train Loss: {train_loss:5.3f}, PPL: {train_ppl:8.2f}, Acc: {train_acc*100:5.2f}% | "
+    f"Val Loss: {val_loss:5.3f}, PPL: {val_ppl:8.2f}, Acc: {val_acc*100:5.2f}% |"
+    )
+    logger.info(log_message)
+
+    if val_loss < best_val_loss:
+        best_val_loss = val_loss
+        torch.save(model.state_dict(), best_model_path)
+        logger.info(f"-> New best model saved to '{best_model_path}' with validation loss: {best_val_loss:.3f}")
+
+
+    torch.save({
+        'epoch': epoch,
+        'model_state_dict': model.state_dict(),
+        'optimizer_state_dict': optimizer.state_dict(),
+        'scheduler_state_dict': scheduler.state_dict(),
+        'best_val_loss': best_val_loss,
+        'train_losses': train_losses,
+        'train_accuracies': train_accuracies,
+        'train_perplexities': train_perplexities,
+        'val_losses': val_losses,
+        'val_accuracies': val_accuracies,
+        'val_perplexities': val_perplexities
+        
+    }, checkpoint_path)
+2025-08-15 16:13:12,291 - INFO - Starting training for 30 epochs on device: cuda
+Training Epoch: 100%|██████████| 625/625 [00:36<00:00, 17.23it/s, loss=8.6907, acc=0.0570] 
+Evaluating: 100%|██████████| 79/79 [00:02<00:00, 32.57it/s]
+2025-08-15 16:13:50,998 - INFO - | Epoch   1/ 30 | Time: 38.71s | LR: 0.000084 | Train Loss: 8.691, PPL:  5947.41, Acc:  5.70% | Val Loss: 6.826, PPL:   921.06, Acc:  5.88% |
+2025-08-15 16:13:51,394 - INFO - -> New best model saved to 'runs/epoch_1_30/best_model.pth' with validation loss: 6.826
+Training Epoch: 100%|██████████| 625/625 [00:35<00:00, 17.40it/s, loss=6.2743, acc=0.1139]
+Evaluating: 100%|██████████| 79/79 [00:02<00:00, 31.99it/s]
+2025-08-15 16:14:30,789 - INFO - | Epoch   2/ 30 | Time: 38.39s | LR: 0.000228 | Train Loss: 6.274, PPL:   530.75, Acc: 11.39% | Val Loss: 5.842, PPL:   344.30, Acc: 14.06% |
+2025-08-15 16:14:31,287 - INFO - -> New best model saved to 'runs/epoch_1_30/best_model.pth' with validation loss: 5.842
+Training Epoch: 100%|██████████| 625/625 [00:36<00:00, 17.35it/s, loss=5.7331, acc=0.1484]
+Evaluating: 100%|██████████| 79/79 [00:02<00:00, 31.82it/s]
+2025-08-15 16:15:11,104 - INFO - | Epoch   3/ 30 | Time: 38.50s | LR: 0.000300 | Train Loss: 5.733, PPL:   308.92, Acc: 14.84% | Val Loss: 5.536, PPL:   253.70, Acc: 16.00% |
+2025-08-15 16:15:11,615 - INFO - -> New best model saved to 'runs/epoch_1_30/best_model.pth' with validation loss: 5.536
+Training Epoch: 100%|██████████| 625/625 [00:36<00:00, 17.34it/s, loss=5.4879, acc=0.1624]
+Evaluating: 100%|██████████| 79/79 [00:02<00:00, 32.09it/s]
+2025-08-15 16:15:51,448 - INFO - | Epoch   4/ 30 | Time: 38.50s | LR: 0.000299 | Train Loss: 5.488, PPL:   241.75, Acc: 16.24% | Val Loss: 5.370, PPL:   214.94, Acc: 16.95% |
+2025-08-15 16:15:51,970 - INFO - -> New best model saved to 'runs/epoch_1_30/best_model.pth' with validation loss: 5.370
+Training Epoch: 100%|██████████| 625/625 [00:35<00:00, 17.42it/s, loss=5.3228, acc=0.1719]
+Evaluating: 100%|██████████| 79/79 [00:02<00:00, 31.90it/s]
+2025-08-15 16:16:31,669 - INFO - | Epoch   5/ 30 | Time: 38.35s | LR: 0.000296 | Train Loss: 5.323, PPL:   204.95, Acc: 17.19% | Val Loss: 5.276, PPL:   195.57, Acc: 17.55% |
+2025-08-15 16:16:32,210 - INFO - -> New best model saved to 'runs/epoch_1_30/best_model.pth' with validation loss: 5.276
+Training Epoch: 100%|██████████| 625/625 [00:36<00:00, 17.35it/s, loss=5.2067, acc=0.1787]
+Evaluating: 100%|██████████| 79/79 [00:02<00:00, 31.31it/s]
+2025-08-15 16:17:12,097 - INFO - | Epoch   6/ 30 | Time: 38.54s | LR: 0.000291 | Train Loss: 5.207, PPL:   182.48, Acc: 17.87% | Val Loss: 5.212, PPL:   183.49, Acc: 18.13% |
+2025-08-15 16:17:12,607 - INFO - -> New best model saved to 'runs/epoch_1_30/best_model.pth' with validation loss: 5.212
+Training Epoch: 100%|██████████| 625/625 [00:35<00:00, 17.45it/s, loss=5.1117, acc=0.1842]
+Evaluating: 100%|██████████| 79/79 [00:02<00:00, 32.13it/s]
+2025-08-15 16:17:52,181 - INFO - | Epoch   7/ 30 | Time: 38.29s | LR: 0.000284 | Train Loss: 5.112, PPL:   165.96, Acc: 18.42% | Val Loss: 5.151, PPL:   172.55, Acc: 18.50% |
+2025-08-15 16:17:52,684 - INFO - -> New best model saved to 'runs/epoch_1_30/best_model.pth' with validation loss: 5.151
+Training Epoch: 100%|██████████| 625/625 [00:35<00:00, 17.44it/s, loss=5.0382, acc=0.1881]
+Evaluating: 100%|██████████| 79/79 [00:02<00:00, 31.90it/s]
+2025-08-15 16:18:32,259 - INFO - | Epoch   8/ 30 | Time: 38.31s | LR: 0.000275 | Train Loss: 5.038, PPL:   154.20, Acc: 18.81% | Val Loss: 5.119, PPL:   167.24, Acc: 18.82% |
+2025-08-15 16:18:32,771 - INFO - -> New best model saved to 'runs/epoch_1_30/best_model.pth' with validation loss: 5.119
+Training Epoch: 100%|██████████| 625/625 [00:35<00:00, 17.39it/s, loss=4.9703, acc=0.1922]
+Evaluating: 100%|██████████| 79/79 [00:02<00:00, 31.89it/s]
+2025-08-15 16:19:12,551 - INFO - | Epoch   9/ 30 | Time: 38.41s | LR: 0.000265 | Train Loss: 4.970, PPL:   144.07, Acc: 19.22% | Val Loss: 5.079, PPL:   160.68, Acc: 19.16% |
+2025-08-15 16:19:13,076 - INFO - -> New best model saved to 'runs/epoch_1_30/best_model.pth' with validation loss: 5.079
+Training Epoch: 100%|██████████| 625/625 [00:35<00:00, 17.43it/s, loss=4.9086, acc=0.1954]
+Evaluating: 100%|██████████| 79/79 [00:02<00:00, 32.25it/s]
+2025-08-15 16:19:52,753 - INFO - | Epoch  10/ 30 | Time: 38.32s | LR: 0.000253 | Train Loss: 4.909, PPL:   135.44, Acc: 19.54% | Val Loss: 5.074, PPL:   159.79, Acc: 19.12% |
+2025-08-15 16:19:53,310 - INFO - -> New best model saved to 'runs/epoch_1_30/best_model.pth' with validation loss: 5.074
+Training Epoch: 100%|██████████| 625/625 [00:35<00:00, 17.42it/s, loss=4.8585, acc=0.1982]
+Evaluating: 100%|██████████| 79/79 [00:02<00:00, 32.65it/s]
+2025-08-15 16:20:32,991 - INFO - | Epoch  11/ 30 | Time: 38.30s | LR: 0.000240 | Train Loss: 4.858, PPL:   128.83, Acc: 19.82% | Val Loss: 5.059, PPL:   157.36, Acc: 19.33% |
+2025-08-15 16:20:33,520 - INFO - -> New best model saved to 'runs/epoch_1_30/best_model.pth' with validation loss: 5.059
+Training Epoch: 100%|██████████| 625/625 [00:35<00:00, 17.39it/s, loss=4.8062, acc=0.2020]
+Evaluating: 100%|██████████| 79/79 [00:02<00:00, 32.34it/s]
+2025-08-15 16:21:13,292 - INFO - | Epoch  12/ 30 | Time: 38.39s | LR: 0.000225 | Train Loss: 4.806, PPL:   122.27, Acc: 20.20% | Val Loss: 5.040, PPL:   154.41, Acc: 19.51% |
+2025-08-15 16:21:13,819 - INFO - -> New best model saved to 'runs/epoch_1_30/best_model.pth' with validation loss: 5.040
+Training Epoch: 100%|██████████| 625/625 [00:35<00:00, 17.42it/s, loss=4.7639, acc=0.2042]
+Evaluating: 100%|██████████| 79/79 [00:02<00:00, 32.04it/s]
+2025-08-15 16:21:53,582 - INFO - | Epoch  13/ 30 | Time: 38.35s | LR: 0.000209 | Train Loss: 4.764, PPL:   117.21, Acc: 20.42% | Val Loss: 5.029, PPL:   152.73, Acc: 19.55% |
+2025-08-15 16:21:54,083 - INFO - -> New best model saved to 'runs/epoch_1_30/best_model.pth' with validation loss: 5.029
+Training Epoch: 100%|██████████| 625/625 [00:35<00:00, 17.40it/s, loss=4.7286, acc=0.2063]
+Evaluating: 100%|██████████| 79/79 [00:02<00:00, 32.39it/s]
+2025-08-15 16:22:33,710 - INFO - | Epoch  14/ 30 | Time: 38.40s | LR: 0.000193 | Train Loss: 4.729, PPL:   113.14, Acc: 20.63% | Val Loss: 5.031, PPL:   153.12, Acc: 19.72% |
+Training Epoch: 100%|██████████| 625/625 [00:35<00:00, 17.39it/s, loss=4.6902, acc=0.2089]
+Evaluating: 100%|██████████| 79/79 [00:02<00:00, 32.14it/s]
+2025-08-15 16:23:13,582 - INFO - | Epoch  15/ 30 | Time: 38.39s | LR: 0.000176 | Train Loss: 4.690, PPL:   108.88, Acc: 20.89% | Val Loss: 5.022, PPL:   151.70, Acc: 19.80% |
+2025-08-15 16:23:14,126 - INFO - -> New best model saved to 'runs/epoch_1_30/best_model.pth' with validation loss: 5.022
+Training Epoch: 100%|██████████| 625/625 [00:35<00:00, 17.40it/s, loss=4.6608, acc=0.2110]
+Evaluating: 100%|██████████| 79/79 [00:02<00:00, 31.95it/s]
+2025-08-15 16:23:53,824 - INFO - | Epoch  16/ 30 | Time: 38.39s | LR: 0.000159 | Train Loss: 4.661, PPL:   105.72, Acc: 21.10% | Val Loss: 5.023, PPL:   151.85, Acc: 19.75% |
+Training Epoch: 100%|██████████| 625/625 [00:35<00:00, 17.43it/s, loss=4.6311, acc=0.2130]
+Evaluating: 100%|██████████| 79/79 [00:02<00:00, 32.02it/s]
+2025-08-15 16:24:33,448 - INFO - | Epoch  17/ 30 | Time: 38.32s | LR: 0.000141 | Train Loss: 4.631, PPL:   102.62, Acc: 21.30% | Val Loss: 5.015, PPL:   150.67, Acc: 19.90% |
+2025-08-15 16:24:33,979 - INFO - -> New best model saved to 'runs/epoch_1_30/best_model.pth' with validation loss: 5.015
+Training Epoch: 100%|██████████| 625/625 [00:35<00:00, 17.42it/s, loss=4.6026, acc=0.2147]
+Evaluating: 100%|██████████| 79/79 [00:02<00:00, 32.54it/s]
+2025-08-15 16:25:13,490 - INFO - | Epoch  18/ 30 | Time: 38.30s | LR: 0.000124 | Train Loss: 4.603, PPL:    99.75, Acc: 21.47% | Val Loss: 5.008, PPL:   149.66, Acc: 19.91% |
+2025-08-15 16:25:14,016 - INFO - -> New best model saved to 'runs/epoch_1_30/best_model.pth' with validation loss: 5.008
+Training Epoch: 100%|██████████| 625/625 [00:35<00:00, 17.51it/s, loss=4.5782, acc=0.2164]
+Evaluating: 100%|██████████| 79/79 [00:02<00:00, 32.02it/s]
+2025-08-15 16:25:53,561 - INFO - | Epoch  19/ 30 | Time: 38.16s | LR: 0.000107 | Train Loss: 4.578, PPL:    97.34, Acc: 21.64% | Val Loss: 5.006, PPL:   149.30, Acc: 20.06% |
+2025-08-15 16:25:54,122 - INFO - -> New best model saved to 'runs/epoch_1_30/best_model.pth' with validation loss: 5.006
+Training Epoch: 100%|██████████| 625/625 [00:35<00:00, 17.45it/s, loss=4.5548, acc=0.2181]
+Evaluating: 100%|██████████| 79/79 [00:02<00:00, 32.00it/s]
+2025-08-15 16:26:33,762 - INFO - | Epoch  20/ 30 | Time: 38.29s | LR: 0.000091 | Train Loss: 4.555, PPL:    95.09, Acc: 21.81% | Val Loss: 5.005, PPL:   149.18, Acc: 19.97% |
+2025-08-15 16:26:34,303 - INFO - -> New best model saved to 'runs/epoch_1_30/best_model.pth' with validation loss: 5.005
+Training Epoch: 100%|██████████| 625/625 [00:35<00:00, 17.45it/s, loss=4.5348, acc=0.2197]
+Evaluating: 100%|██████████| 79/79 [00:02<00:00, 32.01it/s]
+2025-08-15 16:27:13,815 - INFO - | Epoch  21/ 30 | Time: 38.28s | LR: 0.000075 | Train Loss: 4.535, PPL:    93.21, Acc: 21.97% | Val Loss: 4.994, PPL:   147.48, Acc: 20.16% |
+2025-08-15 16:27:14,337 - INFO - -> New best model saved to 'runs/epoch_1_30/best_model.pth' with validation loss: 4.994
+Training Epoch: 100%|██████████| 625/625 [00:35<00:00, 17.39it/s, loss=4.5183, acc=0.2210]
+Evaluating: 100%|██████████| 79/79 [00:02<00:00, 32.23it/s]
+2025-08-15 16:27:54,082 - INFO - | Epoch  22/ 30 | Time: 38.40s | LR: 0.000060 | Train Loss: 4.518, PPL:    91.68, Acc: 22.10% | Val Loss: 5.000, PPL:   148.43, Acc: 20.07% |
+Training Epoch: 100%|██████████| 625/625 [00:35<00:00, 17.36it/s, loss=4.5071, acc=0.2222]
+Evaluating: 100%|██████████| 79/79 [00:02<00:00, 31.91it/s]
+2025-08-15 16:28:33,857 - INFO - | Epoch  23/ 30 | Time: 38.48s | LR: 0.000047 | Train Loss: 4.507, PPL:    90.66, Acc: 22.22% | Val Loss: 4.994, PPL:   147.57, Acc: 20.15% |
+Training Epoch: 100%|██████████| 625/625 [00:36<00:00, 17.33it/s, loss=4.4932, acc=0.2230]
+Evaluating: 100%|██████████| 79/79 [00:02<00:00, 31.93it/s]
+2025-08-15 16:29:13,689 - INFO - | Epoch  24/ 30 | Time: 38.54s | LR: 0.000035 | Train Loss: 4.493, PPL:    89.41, Acc: 22.30% | Val Loss: 5.004, PPL:   148.97, Acc: 20.16% |
+Training Epoch: 100%|██████████| 625/625 [00:36<00:00, 17.29it/s, loss=4.4831, acc=0.2238]
+Evaluating: 100%|██████████| 79/79 [00:02<00:00, 32.13it/s]
+2025-08-15 16:29:53,645 - INFO - | Epoch  25/ 30 | Time: 38.60s | LR: 0.000025 | Train Loss: 4.483, PPL:    88.51, Acc: 22.38% | Val Loss: 5.002, PPL:   148.69, Acc: 20.18% |
+Training Epoch: 100%|██████████| 625/625 [00:36<00:00, 17.16it/s, loss=4.4753, acc=0.2245]
+Evaluating: 100%|██████████| 79/79 [00:02<00:00, 31.81it/s]
+2025-08-15 16:30:33,954 - INFO - | Epoch  26/ 30 | Time: 38.91s | LR: 0.000016 | Train Loss: 4.475, PPL:    87.82, Acc: 22.45% | Val Loss: 5.004, PPL:   148.98, Acc: 20.15% |
+Training Epoch: 100%|██████████| 625/625 [00:36<00:00, 17.27it/s, loss=4.4703, acc=0.2249]
+Evaluating: 100%|██████████| 79/79 [00:02<00:00, 32.02it/s]
+2025-08-15 16:31:13,998 - INFO - | Epoch  27/ 30 | Time: 38.65s | LR: 0.000009 | Train Loss: 4.470, PPL:    87.39, Acc: 22.49% | Val Loss: 4.991, PPL:   147.07, Acc: 20.30% |
+2025-08-15 16:31:14,569 - INFO - -> New best model saved to 'runs/epoch_1_30/best_model.pth' with validation loss: 4.991
+Training Epoch: 100%|██████████| 625/625 [00:35<00:00, 17.39it/s, loss=4.4635, acc=0.2253]
+Evaluating: 100%|██████████| 79/79 [00:02<00:00, 32.01it/s]
+2025-08-15 16:31:54,353 - INFO - | Epoch  28/ 30 | Time: 38.41s | LR: 0.000004 | Train Loss: 4.463, PPL:    86.79, Acc: 22.53% | Val Loss: 5.000, PPL:   148.35, Acc: 20.17% |
+Training Epoch: 100%|██████████| 625/625 [00:35<00:00, 17.40it/s, loss=4.4654, acc=0.2255]
+Evaluating: 100%|██████████| 79/79 [00:02<00:00, 32.00it/s]
+2025-08-15 16:32:33,947 - INFO - | Epoch  29/ 30 | Time: 38.39s | LR: 0.000001 | Train Loss: 4.465, PPL:    86.96, Acc: 22.55% | Val Loss: 4.996, PPL:   147.82, Acc: 20.32% |
+Training Epoch: 100%|██████████| 625/625 [00:35<00:00, 17.42it/s, loss=4.4642, acc=0.2258]
+Evaluating: 100%|██████████| 79/79 [00:02<00:00, 32.64it/s]
+2025-08-15 16:33:13,585 - INFO - | Epoch  30/ 30 | Time: 38.31s | LR: 0.000000 | Train Loss: 4.464, PPL:    86.85, Acc: 22.58% | Val Loss: 4.998, PPL:   148.06, Acc: 20.14% |
+ 
+def plot_history(
+    train_losses: List[float],
+    val_losses: List[float],
+    train_accuracies: List[float],
+    val_accuracies: List[float],
+    train_perplexities: List[float],
+    val_perplexities: List[float]
+):
+    """
+    Plots the training and validation metrics over epochs.
+    """
+    epochs = range(1, len(train_losses) + 1)
+    
+    plt.figure(figsize=(18, 5))
+    
+    # --- Subplot 1: Loss ---
+    plt.subplot(1, 3, 1)
+    plt.plot(epochs, train_losses, 'bo-', label='Training Loss')
+    plt.plot(epochs, val_losses, 'ro-', label='Validation Loss')
+    plt.title('Training and Validation Loss')
+    plt.xlabel('Epochs')
+    plt.ylabel('Loss')
+    plt.legend()
+    plt.grid(True)
+    
+    # --- Subplot 2: Accuracy ---
+    plt.subplot(1, 3, 2)
+    plt.plot(epochs, train_accuracies, 'bo-', label='Training Accuracy')
+    plt.plot(epochs, val_accuracies, 'ro-', label='Validation Accuracy')
+    plt.title('Training and Validation Accuracy')
+    plt.xlabel('Epochs')
+    plt.ylabel('Accuracy')
+    plt.legend()
+    plt.grid(True)
+    
+    # --- Subplot 3: Perplexity ---
+    plt.subplot(1, 3, 3)
+    plt.plot(epochs, train_perplexities, 'bo-', label='Training Perplexity')
+    plt.plot(epochs, val_perplexities, 'ro-', label='Validation Perplexity')
+    plt.title('Training and Validation Perplexity')
+    plt.xlabel('Epochs')
+    plt.ylabel('Perplexity')
+    plt.legend()
+    plt.grid(True)
+    
+    plt.tight_layout()
+    plt.show()
+plot_history(
+    train_losses,
+    val_losses,
+    train_accuracies,
+    val_accuracies,
+    train_perplexities,
+    val_perplexities
+)
+
+# checkpoint = torch.load(checkpoint_path)
+# plot_history(
+#     checkpoint['train_losses'],
+#     checkpoint['val_losses'],
+#     checkpoint['train_accuracies'],
+#     checkpoint['val_accuracies'],
+#     checkpoint['train_perplexities'],
+#     checkpoint['val_perplexities']
+# )
+
+ 
+ 
+best_model_path
+'runs/epoch_1_30/best_model.pth'
+if os.path.exists(best_model_path):
+    model.load_state_dict(torch.load(best_model_path))
+    print(f"Loaded best model weights from '{best_model_path}' for inference.")
+else:
+    print("No best model found. Using the last trained model for inference.")
+Loaded best model weights from 'runs/epoch_1_30/best_model.pth' for inference.
+ 
+prompt = "I think this movie was"
+
+# 3. Generate the text
+print("\n--- Generating Text ---")
+generated_text = generate_text(
+    model=model,
+    prompt=prompt,
+    tokenizer=tokenizer,
+    vocab=vocab,
+    block_size=BLOCK_SIZE,
+    max_new_tokens=100,  # Generate 100 new tokens
+    device=DEVICE
+)
+
+# 4. Print the final result
+print(f"\nPrompt: '{prompt}'")
+print("-" * 50)
+print(f"Generated Text:\n'{generated_text}'")
+print("-" * 50)
+--- Generating Text ---
+
+Prompt: 'I think this movie was'
+--------------------------------------------------
+Generated Text:
+'i think this movie was a great movie i have seen it in a long time and i have to say that it was a great movie i have seen it times and i have seen it times and i have to say that i have seen it times and i have to say that i have seen it times and i have to say that it is a great movie i have seen it again and again and again and again and again i recommend it to anyone who likes it and if you are a fan of the original and i recommend it'
+--------------------------------------------------
+ 
+model.eval()
+
+prompts_to_test = [
+    "This is one of the best films I have ever seen.",
+    "The plot was full of holes and the characters were",
+    "The story is about a young detective who discovers",
+    "That one scene with the car was just"
+]
+
+print("--- Starting Batch Generation ---")
+
+for prompt in prompts_to_test:
+    generated_text = generate_text(
+        model=model,
+        prompt=prompt,
+        tokenizer=tokenizer,
+        vocab=vocab,
+        block_size=BLOCK_SIZE,
+        max_new_tokens=50,  # Generate 50 new tokens for each prompt
+        device=DEVICE
+    )
+    
+    print("-" * 80)
+    print(f"PROMPT: '{prompt}'")
+    print(f"\nGENERATED: '{generated_text}'\n")
+
+print("--- Batch Generation Complete ---")
+--- Starting Batch Generation ---
+--------------------------------------------------------------------------------
+PROMPT: 'This is one of the best films I have ever seen.'
+
+GENERATED: 'this is one of the best films i have ever seen <unk> is a great film and i have seen it times and i have seen it times and i have to say that it is a great movie i have seen it times and i have to say that it is a great movie and i recommend it to anyone who'
+
+--------------------------------------------------------------------------------
+PROMPT: 'The plot was full of holes and the characters were'
+
+GENERATED: 'the plot was full of holes and the characters were not developed and the characters were not developed and the characters were not developed and the story was not developed and the characters were not developed and the story was not developed and the characters were not developed and the story was not very interesting and the story was very'
+
+--------------------------------------------------------------------------------
+PROMPT: 'The story is about a young detective who discovers'
+
+GENERATED: 'the story is about a young detective who discovers a potion that is a <unk> and a woman who is a <unk> and is a <unk> <unk> <unk> <unk> <unk> <unk> <unk> <unk> <unk> <unk> <unk> <unk> <unk> <unk> <unk> <unk> <unk> <unk> <unk> <unk> <unk> <unk> <unk> <unk> <unk> <unk> <unk> <unk> <unk> <unk> <unk> <unk> <unk> <unk>'
+
+--------------------------------------------------------------------------------
+PROMPT: 'That one scene with the car was just'
+
+GENERATED: 'that one scene with the car was just a little too long and the movie was just too long and the ending was so predictable and the ending was so predictable and the ending was so predictable and the ending was so predictable and the ending was so predictable and the ending was so predictable and the ending'
+
+--- Batch Generation Complete ---
+ 
+
+================================================================================================
+D:\Machine Learning Deep Learning\Github Repos\gpt\notebooks\exp2.ipynb
+
+# !pip install torch==2.2.0
+# !pip install torchtext==0.17.2
+# !pip install torchdata==0.7.1
+# !pip install transformers==4.35.2
+# !pip install seaborn
+import os
+os.chdir("..")
+from src.dataloader import get_dataloaders
+from src.model import CustomGPTModel
+from src.engine import train_one_epoch, evaluate
+from src.utils import generate_text, setup_logging
+from src.config import *
+
+import torch
+import torch.nn as nn
+import time
+
+import matplotlib.pyplot as plt
+from typing import List
+from torch.optim.lr_scheduler import StepLR
+ 
+EXPERIMENT_DIR = 'runs/epoch_1_20_v2'
+os.makedirs(EXPERIMENT_DIR, exist_ok=True)
+best_model_path = os.path.join(EXPERIMENT_DIR, "best_model.pth")
+checkpoint_path = os.path.join(EXPERIMENT_DIR, "latest_checkpoint.pth")
+log_file_path = os.path.join(EXPERIMENT_DIR, "training.log")
+logger = setup_logging(log_file_path)
+train_dataloader, val_dataloader, test_dataloader, vocab = get_dataloaders(
+    processed_data_path=PROCESSED_DATA_PATH,
+    vocab_path=VOCAB_PATH,
+    tokenizer=tokenizer,
+    block_size=BLOCK_SIZE,
+    batch_size=BATCH_SIZE,
+    device=DEVICE,
+    PAD_IDX=PAD_IDX,
+    END_OF_TEXT_TOKEN=END_OF_TEXT_TOKEN
+)
+Loading pre-processed data and vocabulary...
+Vocabulary Size: 39270
+Loading complete.
+
+--- Inspecting a single batch from the train_dataloader ---
+Shape of the source (src) batch:	torch.Size([64, 64]) -> [sequence_length, batch_size]
+Shape of the target (tgt) batch:	torch.Size([64, 64]) -> [sequence_length, batch_size]
+
+--- Inspecting the first example in the batch ---
+Shape of a single source example:	torch.Size([64])
+
+Decoded Source (Input to Model):
+'this should have made me think about anything in the <unk> the unnoticed girl is on her way to commit suicide was i the only person cheering her on the clichd classical music long tracking shots melancholy emotion of the film by that stage had me in reversal to what was intended i would have only been happy if she walked into the room'
+
+Decoded Target (What Model Predicts):
+'should have made me think about anything in the <unk> the unnoticed girl is on her way to commit suicide was i the only person cheering her on the clichd classical music long tracking shots melancholy emotion of the film by that stage had me in reversal to what was intended i would have only been happy if she walked into the room and'
+------------------------------------------------------------
+ 
+VOCAB_SIZE = len(vocab)
+VOCAB_SIZE
+39270
+ 
+model = CustomGPTModel(
+    vocab_size=VOCAB_SIZE,
+    embed_size=EMBED_SIZE,
+    num_heads=NUM_HEADS,
+    num_layers=NUM_LAYERS,
+    dropout=DROPOUT,
+    max_seq_len=BLOCK_SIZE
+).to(DEVICE)
+
+
+
+NUM_EPOCHS = 30
+
+optimizer = torch.optim.AdamW(model.parameters(), lr=0.0003) 
+scheduler = StepLR(optimizer, step_size=1, gamma=1.0) 
+loss_fn = nn.CrossEntropyLoss(ignore_index=PAD_IDX)
+def count_parameters(model: nn.Module) -> int:
+    return sum(p.numel() for p in model.parameters() if p.requires_grad)
+
+total_params = count_parameters(model)
+print(f"Total Trainable Parameters: {total_params:,}")
+Total Trainable Parameters: 52,861,286
+ 
+train_losses, train_accuracies, train_perplexities = [], [], []
+val_losses, val_accuracies, val_perplexities = [], [], []
+
+start_epoch = 1
+best_val_loss = float('inf')
+
+logger.info(f"Starting training for {NUM_EPOCHS} epochs on device: {DEVICE}")
+
+for epoch in range(start_epoch, NUM_EPOCHS + 1):
+    epoch_start_time = time.time()
+
+    train_loss, train_acc, train_ppl = train_one_epoch(model, train_dataloader, loss_fn, optimizer, scheduler, DEVICE)
+    val_loss, val_acc, val_ppl = evaluate(model, val_dataloader, loss_fn, DEVICE)
+    
+    epoch_duration = time.time() - epoch_start_time
+    current_lr = optimizer.param_groups[0]['lr']
+
+    train_losses.append(train_loss)
+    train_accuracies.append(train_acc)
+    train_perplexities.append(train_ppl)
+    val_losses.append(val_loss)
+    val_accuracies.append(val_acc)
+    val_perplexities.append(val_ppl)
+
+    log_message = (
+    f"| Epoch {epoch:3d}/{NUM_EPOCHS:3d} | Time: {epoch_duration:5.2f}s | LR: {current_lr:.6f} | "
+    f"Train Loss: {train_loss:5.3f}, PPL: {train_ppl:8.2f}, Acc: {train_acc*100:5.2f}% | "
+    f"Val Loss: {val_loss:5.3f}, PPL: {val_ppl:8.2f}, Acc: {val_acc*100:5.2f}% |"
+    )
+    logger.info(log_message)
+
+    if val_loss < best_val_loss:
+        best_val_loss = val_loss
+        torch.save(model.state_dict(), best_model_path)
+        logger.info(f"-> New best model saved to '{best_model_path}' with validation loss: {best_val_loss:.3f}")
+
+
+    torch.save({
+        'epoch': epoch,
+        'model_state_dict': model.state_dict(),
+        'optimizer_state_dict': optimizer.state_dict(),
+        'scheduler_state_dict': scheduler.state_dict(),
+        'best_val_loss': best_val_loss,
+        'train_losses': train_losses,
+        'train_accuracies': train_accuracies,
+        'train_perplexities': train_perplexities,
+        'val_losses': val_losses,
+        'val_accuracies': val_accuracies,
+        'val_perplexities': val_perplexities
+        
+    }, checkpoint_path)
+2025-08-15 18:37:39,835 - INFO - Starting training for 30 epochs on device: cuda
+Training Epoch: 100%|██████████| 625/625 [01:00<00:00, 10.30it/s, loss=6.7689, acc=0.0678]
+Evaluating: 100%|██████████| 79/79 [00:03<00:00, 23.96it/s]
+2025-08-15 18:38:43,830 - INFO - | Epoch   1/ 30 | Time: 63.99s | LR: 0.000300 | Train Loss: 6.769, PPL:   870.32, Acc:  6.78% | Val Loss: 6.326, PPL:   559.09, Acc:  9.75% |
+2025-08-15 18:38:44,875 - INFO - -> New best model saved to 'runs/epoch_1_20_v2/best_model.pth' with validation loss: 6.326
+Training Epoch: 100%|██████████| 625/625 [01:00<00:00, 10.32it/s, loss=6.1655, acc=0.1101]
+Evaluating: 100%|██████████| 79/79 [00:03<00:00, 23.83it/s]
+2025-08-15 18:39:51,648 - INFO - | Epoch   2/ 30 | Time: 63.89s | LR: 0.000300 | Train Loss: 6.166, PPL:   476.05, Acc: 11.01% | Val Loss: 5.926, PPL:   374.60, Acc: 12.65% |
+2025-08-15 18:39:52,663 - INFO - -> New best model saved to 'runs/epoch_1_20_v2/best_model.pth' with validation loss: 5.926
+Training Epoch: 100%|██████████| 625/625 [01:00<00:00, 10.30it/s, loss=5.8386, acc=0.1313]
+Evaluating: 100%|██████████| 79/79 [00:03<00:00, 23.73it/s]
+2025-08-15 18:40:59,538 - INFO - | Epoch   3/ 30 | Time: 64.02s | LR: 0.000300 | Train Loss: 5.839, PPL:   343.29, Acc: 13.13% | Val Loss: 5.669, PPL:   289.73, Acc: 14.37% |
+2025-08-15 18:41:00,569 - INFO - -> New best model saved to 'runs/epoch_1_20_v2/best_model.pth' with validation loss: 5.669
+Training Epoch: 100%|██████████| 625/625 [01:00<00:00, 10.32it/s, loss=5.6085, acc=0.1479]
+Evaluating: 100%|██████████| 79/79 [00:03<00:00, 23.89it/s]
+2025-08-15 18:42:07,372 - INFO - | Epoch   4/ 30 | Time: 63.90s | LR: 0.000300 | Train Loss: 5.608, PPL:   272.72, Acc: 14.79% | Val Loss: 5.493, PPL:   243.09, Acc: 15.88% |
+2025-08-15 18:42:08,471 - INFO - -> New best model saved to 'runs/epoch_1_20_v2/best_model.pth' with validation loss: 5.493
+Training Epoch: 100%|██████████| 625/625 [01:00<00:00, 10.30it/s, loss=5.4378, acc=0.1599]
+Evaluating: 100%|██████████| 79/79 [00:03<00:00, 23.80it/s]
+2025-08-15 18:43:15,444 - INFO - | Epoch   5/ 30 | Time: 64.02s | LR: 0.000300 | Train Loss: 5.438, PPL:   229.93, Acc: 15.99% | Val Loss: 5.354, PPL:   211.47, Acc: 16.84% |
+2025-08-15 18:43:16,482 - INFO - -> New best model saved to 'runs/epoch_1_20_v2/best_model.pth' with validation loss: 5.354
+Training Epoch: 100%|██████████| 625/625 [01:00<00:00, 10.31it/s, loss=5.2952, acc=0.1698]
+Evaluating: 100%|██████████| 79/79 [00:03<00:00, 23.89it/s]
+2025-08-15 18:44:23,313 - INFO - | Epoch   6/ 30 | Time: 63.93s | LR: 0.000300 | Train Loss: 5.295, PPL:   199.38, Acc: 16.98% | Val Loss: 5.256, PPL:   191.68, Acc: 17.67% |
+2025-08-15 18:44:24,347 - INFO - -> New best model saved to 'runs/epoch_1_20_v2/best_model.pth' with validation loss: 5.256
+Training Epoch: 100%|██████████| 625/625 [01:00<00:00, 10.31it/s, loss=5.1784, acc=0.1777]
+Evaluating: 100%|██████████| 79/79 [00:03<00:00, 23.59it/s]
+2025-08-15 18:45:31,197 - INFO - | Epoch   7/ 30 | Time: 63.95s | LR: 0.000300 | Train Loss: 5.178, PPL:   177.40, Acc: 17.77% | Val Loss: 5.172, PPL:   176.19, Acc: 18.27% |
+2025-08-15 18:45:32,281 - INFO - -> New best model saved to 'runs/epoch_1_20_v2/best_model.pth' with validation loss: 5.172
+Training Epoch: 100%|██████████| 625/625 [01:00<00:00, 10.32it/s, loss=5.0765, acc=0.1842]
+Evaluating: 100%|██████████| 79/79 [00:03<00:00, 23.92it/s]
+2025-08-15 18:46:39,038 - INFO - | Epoch   8/ 30 | Time: 63.88s | LR: 0.000300 | Train Loss: 5.076, PPL:   160.21, Acc: 18.42% | Val Loss: 5.118, PPL:   166.93, Acc: 18.75% |
+2025-08-15 18:46:40,072 - INFO - -> New best model saved to 'runs/epoch_1_20_v2/best_model.pth' with validation loss: 5.118
+Training Epoch: 100%|██████████| 625/625 [01:00<00:00, 10.31it/s, loss=4.9896, acc=0.1896]
+Evaluating: 100%|██████████| 79/79 [00:03<00:00, 23.86it/s]
+2025-08-15 18:47:46,945 - INFO - | Epoch   9/ 30 | Time: 63.93s | LR: 0.000300 | Train Loss: 4.990, PPL:   146.88, Acc: 18.96% | Val Loss: 5.088, PPL:   162.07, Acc: 19.17% |
+2025-08-15 18:47:47,984 - INFO - -> New best model saved to 'runs/epoch_1_20_v2/best_model.pth' with validation loss: 5.088
+Training Epoch: 100%|██████████| 625/625 [01:00<00:00, 10.31it/s, loss=4.9146, acc=0.1942]
+Evaluating: 100%|██████████| 79/79 [00:03<00:00, 23.86it/s]
+2025-08-15 18:48:54,804 - INFO - | Epoch  10/ 30 | Time: 63.91s | LR: 0.000300 | Train Loss: 4.915, PPL:   136.27, Acc: 19.42% | Val Loss: 5.044, PPL:   155.11, Acc: 19.53% |
+2025-08-15 18:48:55,832 - INFO - -> New best model saved to 'runs/epoch_1_20_v2/best_model.pth' with validation loss: 5.044
+Training Epoch: 100%|██████████| 625/625 [01:00<00:00, 10.32it/s, loss=4.8411, acc=0.1988]
+Evaluating: 100%|██████████| 79/79 [00:03<00:00, 23.70it/s]
+2025-08-15 18:50:02,633 - INFO - | Epoch  11/ 30 | Time: 63.92s | LR: 0.000300 | Train Loss: 4.841, PPL:   126.61, Acc: 19.88% | Val Loss: 5.020, PPL:   151.35, Acc: 19.79% |
+2025-08-15 18:50:03,523 - INFO - -> New best model saved to 'runs/epoch_1_20_v2/best_model.pth' with validation loss: 5.020
+Training Epoch: 100%|██████████| 625/625 [01:00<00:00, 10.31it/s, loss=4.7804, acc=0.2023]
+Evaluating: 100%|██████████| 79/79 [00:03<00:00, 23.79it/s]
+2025-08-15 18:51:10,422 - INFO - | Epoch  12/ 30 | Time: 63.94s | LR: 0.000300 | Train Loss: 4.780, PPL:   119.15, Acc: 20.23% | Val Loss: 5.013, PPL:   150.43, Acc: 19.84% |
+2025-08-15 18:51:11,472 - INFO - -> New best model saved to 'runs/epoch_1_20_v2/best_model.pth' with validation loss: 5.013
+Training Epoch: 100%|██████████| 625/625 [01:00<00:00, 10.32it/s, loss=4.7190, acc=0.2058]
+Evaluating: 100%|██████████| 79/79 [00:03<00:00, 23.75it/s]
+2025-08-15 18:52:18,283 - INFO - | Epoch  13/ 30 | Time: 63.89s | LR: 0.000300 | Train Loss: 4.719, PPL:   112.05, Acc: 20.58% | Val Loss: 4.990, PPL:   146.95, Acc: 20.09% |
+2025-08-15 18:52:19,413 - INFO - -> New best model saved to 'runs/epoch_1_20_v2/best_model.pth' with validation loss: 4.990
+Training Epoch: 100%|██████████| 625/625 [01:00<00:00, 10.32it/s, loss=4.6617, acc=0.2101]
+Evaluating: 100%|██████████| 79/79 [00:03<00:00, 23.54it/s]
+2025-08-15 18:53:26,310 - INFO - | Epoch  14/ 30 | Time: 63.95s | LR: 0.000300 | Train Loss: 4.662, PPL:   105.82, Acc: 21.01% | Val Loss: 4.985, PPL:   146.17, Acc: 20.15% |
+2025-08-15 18:53:27,365 - INFO - -> New best model saved to 'runs/epoch_1_20_v2/best_model.pth' with validation loss: 4.985
+Training Epoch: 100%|██████████| 625/625 [01:00<00:00, 10.32it/s, loss=4.6107, acc=0.2130]
+Evaluating: 100%|██████████| 79/79 [00:03<00:00, 23.57it/s]
+2025-08-15 18:54:34,190 - INFO - | Epoch  15/ 30 | Time: 63.93s | LR: 0.000300 | Train Loss: 4.611, PPL:   100.56, Acc: 21.30% | Val Loss: 4.985, PPL:   146.27, Acc: 20.29% |
+Training Epoch: 100%|██████████| 625/625 [01:00<00:00, 10.32it/s, loss=4.5574, acc=0.2170]
+Evaluating: 100%|██████████| 79/79 [00:03<00:00, 23.67it/s]
+2025-08-15 18:55:40,899 - INFO - | Epoch  16/ 30 | Time: 63.93s | LR: 0.000300 | Train Loss: 4.557, PPL:    95.33, Acc: 21.70% | Val Loss: 4.975, PPL:   144.80, Acc: 20.36% |
+2025-08-15 18:55:41,983 - INFO - -> New best model saved to 'runs/epoch_1_20_v2/best_model.pth' with validation loss: 4.975
+Training Epoch: 100%|██████████| 625/625 [01:00<00:00, 10.28it/s, loss=4.5122, acc=0.2202]
+Evaluating: 100%|██████████| 79/79 [00:03<00:00, 23.96it/s]
+2025-08-15 18:56:48,935 - INFO - | Epoch  17/ 30 | Time: 64.10s | LR: 0.000300 | Train Loss: 4.512, PPL:    91.12, Acc: 22.02% | Val Loss: 4.967, PPL:   143.55, Acc: 20.41% |
+2025-08-15 18:56:49,964 - INFO - -> New best model saved to 'runs/epoch_1_20_v2/best_model.pth' with validation loss: 4.967
+Training Epoch: 100%|██████████| 625/625 [01:00<00:00, 10.31it/s, loss=4.4680, acc=0.2237]
+Evaluating: 100%|██████████| 79/79 [00:03<00:00, 23.98it/s]
+2025-08-15 18:57:56,730 - INFO - | Epoch  18/ 30 | Time: 63.91s | LR: 0.000300 | Train Loss: 4.468, PPL:    87.18, Acc: 22.37% | Val Loss: 4.976, PPL:   144.92, Acc: 20.44% |
+Training Epoch: 100%|██████████| 625/625 [01:00<00:00, 10.32it/s, loss=4.4243, acc=0.2268]
+Evaluating: 100%|██████████| 79/79 [00:03<00:00, 24.05it/s]
+2025-08-15 18:59:03,619 - INFO - | Epoch  19/ 30 | Time: 63.89s | LR: 0.000300 | Train Loss: 4.424, PPL:    83.46, Acc: 22.68% | Val Loss: 4.981, PPL:   145.67, Acc: 20.44% |
+Training Epoch: 100%|██████████| 625/625 [01:00<00:00, 10.31it/s, loss=4.3814, acc=0.2305]
+Evaluating: 100%|██████████| 79/79 [00:03<00:00, 24.01it/s]
+2025-08-15 19:00:10,424 - INFO - | Epoch  20/ 30 | Time: 63.94s | LR: 0.000300 | Train Loss: 4.381, PPL:    79.95, Acc: 23.05% | Val Loss: 4.982, PPL:   145.70, Acc: 20.59% |
+Training Epoch: 100%|██████████| 625/625 [01:00<00:00, 10.29it/s, loss=4.3455, acc=0.2336]
+Evaluating: 100%|██████████| 79/79 [00:03<00:00, 23.61it/s]
+2025-08-15 19:01:17,524 - INFO - | Epoch  21/ 30 | Time: 64.07s | LR: 0.000300 | Train Loss: 4.346, PPL:    77.13, Acc: 23.36% | Val Loss: 4.971, PPL:   144.21, Acc: 20.68% |
+Training Epoch: 100%|██████████| 625/625 [01:00<00:00, 10.31it/s, loss=4.3057, acc=0.2368]
+Evaluating: 100%|██████████| 79/79 [00:03<00:00, 24.04it/s]
+2025-08-15 19:02:24,420 - INFO - | Epoch  22/ 30 | Time: 63.94s | LR: 0.000300 | Train Loss: 4.306, PPL:    74.12, Acc: 23.68% | Val Loss: 4.982, PPL:   145.70, Acc: 20.68% |
+Training Epoch:  12%|█▏        | 75/625 [00:07<00:53, 10.29it/s, loss=4.2304, acc=0.2437]
+ 
+def plot_history(
+    train_losses: List[float],
+    val_losses: List[float],
+    train_accuracies: List[float],
+    val_accuracies: List[float],
+    train_perplexities: List[float],
+    val_perplexities: List[float]
+):
+    """
+    Plots the training and validation metrics over epochs.
+    """
+    epochs = range(1, len(train_losses) + 1)
+    
+    plt.figure(figsize=(18, 5))
+    
+    # --- Subplot 1: Loss ---
+    plt.subplot(1, 3, 1)
+    plt.plot(epochs, train_losses, 'bo-', label='Training Loss')
+    plt.plot(epochs, val_losses, 'ro-', label='Validation Loss')
+    plt.title('Training and Validation Loss')
+    plt.xlabel('Epochs')
+    plt.ylabel('Loss')
+    plt.legend()
+    plt.grid(True)
+    
+    # --- Subplot 2: Accuracy ---
+    plt.subplot(1, 3, 2)
+    plt.plot(epochs, train_accuracies, 'bo-', label='Training Accuracy')
+    plt.plot(epochs, val_accuracies, 'ro-', label='Validation Accuracy')
+    plt.title('Training and Validation Accuracy')
+    plt.xlabel('Epochs')
+    plt.ylabel('Accuracy')
+    plt.legend()
+    plt.grid(True)
+    
+    # --- Subplot 3: Perplexity ---
+    plt.subplot(1, 3, 3)
+    plt.plot(epochs, train_perplexities, 'bo-', label='Training Perplexity')
+    plt.plot(epochs, val_perplexities, 'ro-', label='Validation Perplexity')
+    plt.title('Training and Validation Perplexity')
+    plt.xlabel('Epochs')
+    plt.ylabel('Perplexity')
+    plt.legend()
+    plt.grid(True)
+    
+    plt.tight_layout()
+    plt.show()
+# plot_history(
+#     train_losses,
+#     val_losses,
+#     train_accuracies,
+#     val_accuracies,
+#     train_perplexities,
+#     val_perplexities
+# )
+
+EXPERIMENT_DIR = 'runs/epoch_1_20_v2'
+checkpoint_path = os.path.join(EXPERIMENT_DIR, "latest_checkpoint.pth")
+checkpoint = torch.load(checkpoint_path)
+plot_history(
+    checkpoint['train_losses'],
+    checkpoint['val_losses'],
+    checkpoint['train_accuracies'],
+    checkpoint['val_accuracies'],
+    checkpoint['train_perplexities'],
+    checkpoint['val_perplexities']
+)
+
+ 
+best_model_path = os.path.join(EXPERIMENT_DIR, "best_model.pth")
+best_model_path
+'runs/epoch_1_20_v2/best_model.pth'
+if os.path.exists(best_model_path):
+    model.load_state_dict(torch.load(best_model_path))
+    print(f"Loaded best model weights from '{best_model_path}' for inference.")
+else:
+    print("No best model found. Using the last trained model for inference.")
+Loaded best model weights from 'runs/epoch_1_20_v2/best_model.pth' for inference.
+ 
+prompt = "I think this movie was"
+
+# 3. Generate the text
+print("\n--- Generating Text ---")
+generated_text = generate_text(
+    model=model,
+    prompt=prompt,
+    tokenizer=tokenizer,
+    vocab=vocab,
+    block_size=BLOCK_SIZE,
+    max_new_tokens=100,  # Generate 100 new tokens
+    device=DEVICE
+)
+
+# 4. Print the final result
+print(f"\nPrompt: '{prompt}'")
+print("-" * 50)
+print(f"Generated Text:\n'{generated_text}'")
+print("-" * 50)
+--- Generating Text ---
+
+Prompt: 'I think this movie was'
+--------------------------------------------------
+Generated Text:
+'i think this movie was a bit too much for me but i was pleasantly surprised by the acting and the story line i was disappointed with the movie the plot was pretty weak and the acting was pretty good but the story was pretty weak and the plot was weak the plot was weak and the acting was pretty good but the movie was a little too long and the plot was pretty weak the plot was pretty weak and the acting was pretty good but the movie was a little too long and the plot was pretty much a little too much to'
+--------------------------------------------------
+ 
+model.eval()
+
+prompts_to_test = [
+    "This is one of the best films I have ever seen.",
+    "The plot was full of holes and the characters were",
+    "The story is about a young detective who discovers",
+    "That one scene with the car was just"
+]
+
+print("--- Starting Batch Generation ---")
+
+for prompt in prompts_to_test:
+    generated_text = generate_text(
+        model=model,
+        prompt=prompt,
+        tokenizer=tokenizer,
+        vocab=vocab,
+        block_size=BLOCK_SIZE,
+        max_new_tokens=50,  # Generate 50 new tokens for each prompt
+        device=DEVICE
+    )
+    
+    print("-" * 80)
+    print(f"PROMPT: '{prompt}'")
+    print(f"\nGENERATED: '{generated_text}'\n")
+
+print("--- Batch Generation Complete ---")
+--- Starting Batch Generation ---
+--------------------------------------------------------------------------------
+PROMPT: 'This is one of the best films I have ever seen.'
+
+GENERATED: 'this is one of the best films i have ever seen <unk> is a great film and i have seen it times over and over again and again and again i have seen it times over and over again and again and again i have seen it again and again and again and again and again i have seen it again and'
+
+--------------------------------------------------------------------------------
+PROMPT: 'The plot was full of holes and the characters were'
+
+GENERATED: 'the plot was full of holes and the characters were so underdeveloped that they were not even close to the original story the plot was so weak and the acting was so bad that i couldnt care less about the characters and the plot was so bad that i couldnt care less about the characters and the plot was so'
+
+--------------------------------------------------------------------------------
+PROMPT: 'The story is about a young detective who discovers'
+
+GENERATED: 'the story is about a young detective who discovers that his wife is a man who is a man who is a man who is a man who is a man who is a man who is a man who is a man who is a man who is a man who is a man who is a man'
+
+--------------------------------------------------------------------------------
+PROMPT: 'That one scene with the car was just'
+
+GENERATED: 'that one scene with the car was just a bit of a stretch but the movie was so bad that i was expecting a lot of the movie was actually quite good but i was expecting a lot of the movie to be a little bit of a surprise ending but it was a good movie to watch'
+
+--- Batch Generation Complete ---
+
+
+
+================================================================================================
+
+================================================================================================
+
+
+================================================================================================
+ 
