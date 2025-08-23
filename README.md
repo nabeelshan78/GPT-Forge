@@ -4,7 +4,7 @@
 ![PyTorch](https://img.shields.io/badge/PyTorch-2.2%2B-%23EE4C2C.svg)
 ![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
 
-This repository contains a complete, from-scratch implementation of a GPT-style (decoder-only) Transformer model for autoregressive text generation. The model is built entirely in **PyTorch**, trained on the **IMDB movie review dataset**, and structured as a modular and reproducible machine learning project.
+This repository contains a complete, from-scratch implementation of a **GPT-style (decoder-only)** Transformer model for autoregressive text generation. The model is built entirely in **PyTorch**, trained on the **IMDB movie review dataset**, and structured as a modular and reproducible machine learning project.
 
 The primary goal of this project was to build a deep, hands-on understanding of the internal mechanics of the Transformer architecture, which powers modern Large Language Models.
 
