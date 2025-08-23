@@ -148,9 +148,9 @@ from src.model import CustomGPTModel
 from src.utils import generate_text
 from src.config import tokenizer, BLOCK_SIZE, DEVICE
 
-# --- 1. Load Vocabulary and Model ---
+# Load Vocabulary and Model
 VOCAB_PATH = "artifacts/vocab.pth"
-MODEL_PATH = "runs/epoch_1_20_v2/best_model.pth" # Path to your best model
+MODEL_PATH = "runs/epoch_1_20_v2/best_model.pth" # Path to the best model
 
 vocab = torch.load(VOCAB_PATH)
 VOCAB_SIZE = len(vocab)
@@ -158,7 +158,7 @@ VOCAB_SIZE = len(vocab)
 # Re-create the model architecture
 model = CustomGPTModel(
     vocab_size=VOCAB_SIZE,
-    embed_size=512,  # Use params from the corresponding experiment
+    embed_size=512,  
     num_heads=8,
     num_layers=4,
     dropout=0.15,
@@ -169,7 +169,7 @@ model = CustomGPTModel(
 model.load_state_dict(torch.load(MODEL_PATH, map_location=DEVICE))
 print("Model and vocabulary loaded successfully!")
 
-# --- 2. Generate Text ---
+# Generate Text
 prompt = "This is one of the best films I have ever seen."
 generated_text = generate_text(
     model=model,
