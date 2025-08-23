@@ -110,8 +110,8 @@ Follow these steps to set up the environment and run the project.
 
 ### 1. Clone the Repository
 ```bash
-git clone https://github.com/nabeelshan78/GPT-Forge.git
-cd GPT-Forge
+git clone https://github.com/nabeelshan78/GPT-Forge-from-scratch-transformer-text-generation.git
+cd GPT-Forge-from-scratch-transformer-text-generation
 ```
 
 ### 2. Create Environment and Install Dependencies
