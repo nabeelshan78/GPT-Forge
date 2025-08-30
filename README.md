@@ -94,7 +94,7 @@ Follow these steps to set up the environment and run the project on your local m
 ### 1. Clone the Repository & Set Up Environment
 It is recommended to use a virtual environment.
 ```bash
-git clone [https://github.com/nabeelshan78/GPT-Forge-from-scratch-transformer-text-generation.git](https://github.com/nabeelshan78/GPT-Forge-from-scratch-transformer-text-generation.git)
+git clone https://github.com/nabeelshan78/GPT-Forge-from-scratch-transformer-text-generation.git
 cd GPT-Forge-from-scratch-transformer-text-generation
 
 python -m venv venv
