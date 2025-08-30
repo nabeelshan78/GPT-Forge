@@ -1,78 +1,64 @@
-# 🔥 **GPT-Forge: From-Scratch Transformer for Text Generation**
+# GPT-Forge: A From-Scratch Transformer for Text Generation
 
-![Python](https://img.shields.io/badge/Python-3.9%2B-blue.svg)
-![PyTorch](https://img.shields.io/badge/PyTorch-2.2%2B-%23EE4C2C.svg)
-![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
 
-This repository contains a complete, from-scratch implementation of a **GPT-style (decoder-only)** Transformer model for autoregressive text generation. The model is built entirely in **PyTorch**, trained on the **IMDB movie review dataset**, and structured as a modular and reproducible machine learning project.
+<div align="center">
 
-The primary goal of this project was to build a deep, hands-on understanding of the internal mechanics of the Transformer architecture, which powers modern Large Language Models.
+![Python](https://img.shields.io/badge/Python-3.9%2B-blue?style=for-the-badge&logo=python)
+![PyTorch](https://img.shields.io/badge/PyTorch-2.2%2B-%23EE4C2C?style=for-the-badge&logo=pytorch)
+![License: MIT](https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge)
 
----
+</div>
 
-## Table of Contents
-- [Key Features](#-key-features)
-- [Results and Performance](#results-and-performance)
-- [Core Concepts Implemented](#core-concepts-implemented)
-- [Setup and Usage](#-setup-and-usage)
-- [Project Structure](#project-structure)
-- [Future Improvements](#future-improvements)
-
-## ✨ Key Features
-
-* **Modular Codebase:** A well-organized and decoupled source directory (`src/`) that separates data handling, model architecture, training engine, and utilities for clarity and scalability.
-* **Custom Transformer Model:** A custom GPT model built using PyTorch's `nn.TransformerEncoderLayer`, demonstrating a deep understanding of core components.
-* **Complete ML Pipeline:** A full end-to-end pipeline covering:
-    * **Data Preparation:** Robust text cleaning and processing.
-    * **Custom Dataloader:** Efficient batching and padding.
-    * **Training & Evaluation Engine:** A comprehensive training loop with metrics tracking (Loss, Accuracy, Perplexity), model checkpointing, and logging.
-    * **Text Generation:** Inference script to generate text from a given prompt using a trained model.
-* **Experiment Tracking:** Systematic tracking of two distinct experiments with different hyperparameters, with results logged and visualized.
+This repository showcases my from-scratch implementation of a GPT-style (decoder-only) Transformer model in PyTorch. I built this project to gain a fundamental, first-principles understanding of the architecture that powers modern Large Language Models. The entire pipeline—from data preprocessing to autoregressive inference—is engineered for clarity, modularity, and reproducibility.
 
 ---
 
-## Results and Performance
+## 🎯 Key Achievements
 
-*All experiments were conducted on an NVIDIA A10G GPU.*  
-Two primary experiments were conducted to analyze the impact of **model size** on performance. The key evaluation metrics are **Cross-Entropy Loss** and **Perplexity (PPL)**, where lower values indicate a better-performing model.
+* **Engineered a GPT-style Transformer from the Ground Up:** I implemented the core components of a decoder-only Transformer, including multi-head self-attention with causal masking, positional embeddings, and feed-forward layers, using pure PyTorch to solidify my understanding of the model's internal mechanics.
+* **Built a Complete End-to-End ML Pipeline:** I designed and developed a robust pipeline covering data ingestion, text cleaning, tokenization, a custom `DataLoader` for efficient batching, and a flexible training and evaluation engine with checkpointing.
+* **Conducted Systematic Experimentation:** I systematically trained and evaluated two models of different scales (~22M and ~52M parameters) to validate the impact of model capacity on performance, tracking key metrics like loss and perplexity.
+* **Developed a Text Generation Interface:** I created an inference module to generate coherent text autoregressively from a given prompt, demonstrating the model's practical language modeling capabilities.
 
-### Experiment 1: Baseline Model
+---
 
-This experiment established a baseline with a smaller Transformer architecture.
+## 📈 Performance & Results
 
-* **Model:** 2 layers, 4 attention heads, 256 embedding dimensions (~22M parameters).
-* **Best Validation Loss:** `4.991`
-* **Best Validation Perplexity:** `147.07`
+To validate the model's learning capabilities and the impact of scaling, I trained two versions and compared their performance on the IMDB dataset. As hypothesized, the larger model achieved superior results, confirming its enhanced capacity to model the data distribution.
+
+*All experiments were conducted on an NVIDIA A10G GPU.*
+
+### Experiment 1: Baseline Model (22M Parameters)
+* **Architecture**: 2 layers, 4 attention heads, 256 embedding dimensions.
+* **Best Validation Loss**: `4.991`
+* **Best Validation Perplexity**: `147.07`
 
 ![Training and Validation Metrics for Experiment 1](images/01_baseline_training_metrics.png)
 
-### Experiment 2: Larger Model
-
-This experiment scaled up the model's capacity to observe its effect on language modeling capabilities.
-
-* **Model:** 4 layers, 8 attention heads, 512 embedding dimensions (~52M parameters).
-* **Best Validation Loss:** `4.967`
-* **Best Validation Perplexity:** `143.55`
+### Experiment 2: Scaled Model (52M Parameters)
+* **Architecture**: 4 layers, 8 attention heads, 512 embedding dimensions.
+* **Best Validation Loss**: `4.967`
+* **Best Validation Perplexity**: `143.55`
 
 ![Training and Validation Metrics for Experiment 2](images/02_scaled_training_metrics.png)
 
-### Performance Comparison
+### Results Summary
+Scaling up the model's parameters directly resulted in improved performance, showcasing a successful implementation of a scalable Transformer architecture.
 
-As expected, **scaling up the model's parameters resulted in better performance**, achieving a lower validation loss and perplexity. This demonstrates the model's ability to leverage increased capacity to better understand the patterns in the training data.
-
-| Metric                  | Experiment 1 (Baseline) | Experiment 2 (Larger Model) |
-| :---------------------- | :---------------------- | :--------------------------|
+| Metric                 | Experiment 1 (Baseline) | Experiment 2 (Larger Model) |
+| :--------------------- | :---------------------- | :-------------------------- |
 | **Embedding Size** | 256                     | **512** |
 | **Num Layers** | 2                       | **4** |
 | **Num Heads** | 4                       | **8** |
 | **Total Parameters** | ~22M                    | **~52M** |
 | **Best Validation Loss**| 4.991                   | **4.967** |
 | **Best Validation PPL** | 147.07                  | **143.55** |
+
 ---
 
-### Text Generation Showcase
+### ✍️ Text Generation Showcase
 
-Here are some examples of text generated by the best-performing model (from Experiment 2) given a prompt.
+Below are unedited text samples generated by the 52M parameter model.
 
 **Prompt 1:**
 > "I think this movie was"
@@ -90,57 +76,49 @@ Here are some examples of text generated by the best-performing model (from Expe
 
 ---
 
+## 🛠️ Tech Stack & Core Concepts
 
-## Core Concepts Implemented
+This project demonstrates my proficiency in the following areas:
 
-This project serves as a practical demonstration of several core concepts in Transformer models:
-
--   **Token and Positional Embeddings:** Creating input representations that capture both semantic meaning and sequence order.
--   **Self-Attention Mechanism:** The core of the Transformer, allowing the model to weigh the importance of different tokens in a sequence.
--   **Causal (Look-ahead) Masking:** Ensuring the model can only attend to previous tokens during training, which is crucial for autoregressive generation.
--   **Padding Masking:** Teaching the model to ignore padding tokens in batched sequences.
--   **Stacking Transformer Layers:** Building a deep model by stacking multiple `TransformerEncoder` blocks.
--   **Autoregressive Inference:** Generating text one token at a time by feeding the model's own output back as input.
+* **Languages & Frameworks:** Python, PyTorch, NumPy
+* **Transformer Architecture:** Multi-Head Self-Attention, Positional Encodings, Layer Normalization, Feed-Forward Networks.
+* **NLP Concepts:** Autoregressive Generation, Causal & Padding Masking, Tokenization, Vocabulary Building.
+* **ML Engineering:** Modular Code Design, Custom DataLoaders, End-to-End Training Loops, GPU Acceleration, Model Checkpointing, Experiment Tracking.
 
 ---
 
-## 🔧 Setup and Usage
+## 🚀 Getting Started
 
-Follow these steps to set up the environment and run the project.
+Follow these steps to set up the environment and run the project on your local machine.
 
-### 1. Clone the Repository
-```bash
-git clone https://github.com/nabeelshan78/GPT-Forge-from-scratch-transformer-text-generation.git
-cd GPT-Forge-from-scratch-transformer-text-generation
-```
-
-### 2. Create Environment and Install Dependencies
+### 1. Clone the Repository & Set Up Environment
 It is recommended to use a virtual environment.
 ```bash
-python -m venv venv
-source venv/bin/activate  # On Windows, use `venv\Scripts\activate`
-pip install -r requirements.txt
+git clone [https://github.com/nabeelshan78/GPT-Forge-from-scratch-transformer-text-generation.git](https://github.com/nabeelshan78/GPT-Forge-from-scratch-transformer-text-generation.git)
+cd GPT-Forge-from-scratch-transformer-text-generation
 
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+pip install -r requirements.txt
 ```
 
-### 3. Prepare the Data
-First, you need to download the IMDB dataset. The `prepare_data.py` script assumes you have a `data/imdb_dataset.pt` file. You can create this with a simple script using `torchtext`.
-
-Once the raw data is in place, run the preparation script:
+### 2. Prepare the Data
+Download the IMDB dataset (e.g., using torchtext) and place it as data/imdb_dataset.pt. Then, run the preparation script to process the data and build the vocabulary.
 ```bash
 python scripts/prepare_data.py
 ```
-This will clean the text, create a new 80/10/10 train-validation-test split, build a vocabulary, and save the processed files to `data/` and `artifacts/`.
 
-### 4. Training
-The training pipelines and experiments are detailed in the Jupyter notebooks. To train the model, open and run the cells in:
-- `notebooks/01_experiment_baseline_model.ipynb`
-- `notebooks/02_experiment_scaled_model.ipynb`
+### 3. Train a Model
+The training and experiment logic is contained in the notebooks. To kick off a training run, execute the cells in:
+* `notebooks/01_experiment_baseline_model.ipynb`
+* `notebooks/02_experiment_scaled_model.ipynb`
 
-All logs, checkpoints, and the best model for each experiment will be saved in the `runs/` directory.
+Logs and model checkpoints will be saved to the `runs/` directory.
 
-### 5. Inference
-To generate text using a trained model, you can use a simple script like the one below. Make sure to point to the correct vocabulary and model checkpoint paths.
+---
+
+### 4. Generate Text (Inference)
+Use the following Python script to generate text with a trained model. Remember to update `MODEL_PATH` to your checkpoint file.
 
 ```python
 import torch
@@ -148,28 +126,28 @@ from src.model import CustomGPTModel
 from src.utils import generate_text
 from src.config import tokenizer, BLOCK_SIZE, DEVICE
 
-# Load Vocabulary and Model
+# --- Configuration ---
 VOCAB_PATH = "artifacts/vocab.pth"
-MODEL_PATH = "runs/epoch_1_20_v2/best_model.pth" # Path to the best model
+MODEL_PATH = "runs/epoch_1_20_v2/best_model.pth" # <-- Point to your best model checkpoint
+MODEL_CONFIG = {
+    "embed_size": 512,
+    "num_heads": 8,
+    "num_layers": 4,
+    "dropout": 0.15,
+}
 
+# --- Load Model and Vocabulary ---
 vocab = torch.load(VOCAB_PATH)
-VOCAB_SIZE = len(vocab)
-
-# Re-create the model architecture
 model = CustomGPTModel(
-    vocab_size=VOCAB_SIZE,
-    embed_size=512,  
-    num_heads=8,
-    num_layers=4,
-    dropout=0.15,
-    max_seq_len=BLOCK_SIZE
+    vocab_size=len(vocab),
+    max_seq_len=BLOCK_SIZE,
+    **MODEL_CONFIG
 ).to(DEVICE)
-
-# Load the trained weights
 model.load_state_dict(torch.load(MODEL_PATH, map_location=DEVICE))
-print("Model and vocabulary loaded successfully!")
+model.eval()
+print("✅ Model and vocabulary loaded successfully!")
 
-# Generate Text
+# --- Generate Text ---
 prompt = "This is one of the best films I have ever seen."
 generated_text = generate_text(
     model=model,
@@ -185,66 +163,29 @@ print("-" * 50)
 print(f"Prompt: '{prompt}'")
 print(f"Generated Text: '{generated_text}'")
 print("-" * 50)
+
 ```
-
-### Hardware Requirements
-
-A CUDA-enabled GPU is **highly recommended** for training this model in a reasonable amount of time.
-
-- The training script will automatically detect and use an available NVIDIA GPU.
-- If a compatible GPU is not found, the code will fall back to using the CPU, but training will be **significantly slower**.
-
+> Note: A CUDA-enabled GPU is highly recommended for training. The code will automatically use an available GPU.
 ---
 
-## Project Structure
-
-The repository is organized to maintain a clean and scalable project structure.
-
+### 5. 📂 Project Architecture
+I organized the repository to follow modern ML engineering best practices, ensuring a clean separation of concerns.
 ```
-GPT-Forge/
-├── 00_model_prototyping.ipynb      # Initial notebook for development and testing
-├── data/
-│   ├── imdb_dataset.pt             # Raw data (user must provide)
-│   └── processed_data.pkl          # Processed train/val/test splits
-│
-├── images/
-│   ├── 01_baseline_training_metrics.png # Training metrics for the baseline model
-│   └── 02_scaled_training_metrics.png   # Training metrics for the scaled model
-│
-├── notebooks/
-│   ├── 01_experiment_baseline_model.ipynb # Notebook for training the baseline model
-│   └── 02_experiment_scaled_model.ipynb   # Notebook for training the scaled model
-│
-├── runs/
-│   ├── epoch_1_30/                 # Logs & models for Experiment 1 (Baseline)
-│   │   ├── best_model.pth
-│   │   └── training.log
-│   └── epoch_1_20_v2/              # Logs & models for Experiment 2 (Scaled)
-│       ├── best_model.pth
-│       └── training.log
-│
-├── scripts/
-│   └── prepare_data.py             # Script for data cleaning and preprocessing
-│
-├── src/
-│   ├── config.py                   # Hyperparameters and project constants
-│   ├── dataloader.py               # Data loading and collation logic
-│   ├── engine.py                   # Training and evaluation loops
-│   ├── model.py                    # Main CustomGPTModel class
-│   ├── modules.py                  # Sub-modules (PositionalEncoding, etc.)
-│   └── utils.py                    # Helper functions (text generation, logging)
-│
-├── README.md                       # You are here!
-└── requirements.txt                # Project dependencies
+GPT-Forge-from-scratch-transformer-text-generation/
+├── data/                  # Raw and processed datasets
+├── images/                # Visuals for README
+├── notebooks/             # Jupyter notebooks for experiments
+├── runs/                  # Saved models, logs, and checkpoints
+├── scripts/               # Standalone scripts (e.g., data prep)
+├── src/                   # Main source code
+│   ├── config.py          # Hyperparameters and constants
+│   ├── dataloader.py      # Custom data loading logic
+│   ├── engine.py          # Training and evaluation loops
+│   ├── model.py           # Core CustomGPTModel class
+│   └── utils.py           # Helper functions
+├── README.md              # You are here!
+└── requirements.txt       # Project dependencies
 ```
 
 ---
 
-## Future Improvements
-
--   **Implement Advanced Sampling:** Add sampling strategies like **Top-k**, **Top-p (Nucleus)**, and **temperature scaling** for more diverse and creative text generation.
--   **Larger Dataset:** Train the model on a larger, more diverse corpus like OpenWebText to improve coherence and general knowledge.
--   **CLI Interface:** Develop a command-line interface for easier training and inference without needing to run notebooks.
--   **Architectural Enhancements:** Experiment with different activation functions (GeLU) and normalization layers (LayerNorm).
-
----
